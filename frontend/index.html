@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Senera - AI Outfit Generator</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .upload-form { border: 2px dashed #ccc; padding: 30px; text-align: center; margin-bottom: 20px; }
+        .result { margin-top: 30px; padding: 20px; background: #f5f5f5; border-radius: 8px; }
+        .loading { display: none; color: #666; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        input[type="file"], input[type="text"] { margin: 10px; padding: 8px; width: 300px; }
+        .outfit-image { max-width: 100%; border-radius: 8px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <h1>🎨 Senera - AI Outfit Generator</h1>
+    <p>Upload an image of clothing items and get AI-generated outfit photos!</p>
+    
+    <div class="upload-form">
+        <form id="outfitForm">
+            <div>
+                <label for="imageInput">📷 Upload clothing image:</label><br>
+                <input type="file" id="imageInput" accept="image/*" required>
+            </div>
+            <div>
+                <label for="promptInput">💭 Outfit style:</label><br>
+                <input type="text" id="promptInput" placeholder="e.g., Casual spring outfit for a picnic" value="Casual and stylish">
+            </div>
+            <button type="submit">✨ Generate Outfit Photo</button>
+        </form>
+        
+        <div class="loading" id="loading">
+            ⏳ AI is analyzing clothes and generating outfit photo... (this may take 20-30 seconds)
+        </div>
+    </div>
+    
+    <div class="result" id="result" style="display: none;">
+        <h3>🎯 AI Generated Outfit:</h3>
+        <img id="outfitImage" class="outfit-image" alt="Generated outfit">
+    </div>
+
+    <script>
+        document.getElementById('outfitForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('imageInput');
+            const promptInput = document.getElementById('promptInput');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const outfitImage = document.getElementById('outfitImage');
+            
+            if (!fileInput.files[0]) {
+                alert('Please select an image first!');
+                return;
+            }
+            
+            // Show loading state
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', fileInput.files[0]);
+                formData.append('prompt', promptInput.value);
+                
+                const response = await fetch('/generate-outfit', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    outfitImage.src = data.outfit_image;
+                    result.style.display = 'block';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
