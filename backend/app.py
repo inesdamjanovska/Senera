@@ -91,9 +91,10 @@ def generate_outfit():
 
         # DALL·E 3: generate full-body image
         dalle_prompt = (
-            f"Photo of a 1(one) fashion model standing full-body, head to toe, in a neutral pose. She only appears once in the image "
-            f"The model is wearing: {clothing_description}. white background. "
-            f"Styled for: {prompt}. High-quality studio lighting. No other people or props."
+            f"A full-body photo of a single female fashion model standing in a neutral pose, "
+            f"standing up head-to-toe, with no background and no shadow. The model is wearing: {clothing_description}. "
+            f"The style should reflect: {prompt}. Ensure the image contains only one model, "
+            f"with no additional people, props, or objects. High-quality studio lighting."
         )
 
         dalle_payload = {
@@ -113,7 +114,10 @@ def generate_outfit():
         if dalle_response.status_code == 200:
             result = dalle_response.json()
             image_url = result['data'][0]['url']
-            return jsonify({'outfit_image': image_url})
+            return jsonify({
+                'outfit_image': image_url,
+                'clothing_description': clothing_description  # Include clothing description in the response
+            })
         else:
             return jsonify({'error': f'DALL·E error: {dalle_response.text}'}), 500
 
