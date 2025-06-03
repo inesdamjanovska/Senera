@@ -39,7 +39,6 @@
     
     <div class="result" id="result" style="display: none;">
         <h3>🎯 AI Generated Outfit:</h3>
-        <p><strong>Clothing Description:</strong> <span id="clothingDescription"></span></p>
         <img id="outfitImage" class="outfit-image" alt="Generated outfit">
     </div>
 
@@ -52,7 +51,6 @@
             const loading = document.getElementById('loading');
             const result = document.getElementById('result');
             const outfitImage = document.getElementById('outfitImage');
-            const clothingDescription = document.getElementById('clothingDescription');
             
             if (!fileInput.files[0]) {
                 alert('Please select an image first!');
@@ -77,7 +75,6 @@
                 
                 if (response.ok) {
                     outfitImage.src = data.outfit_image;
-                    clothingDescription.textContent = data.clothing_description; // Display clothing description
                     result.style.display = 'block';
                 } else {
                     alert('Error: ' + data.error);
