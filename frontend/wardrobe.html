@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Senera - Wardrobe</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .navbar { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .navbar a { text-decoration: none; color: #007bff; font-weight: bold; }
+        .upload-form { border: 2px dashed #ccc; padding: 30px; text-align: center; margin-bottom: 20px; }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
+        .gallery-item { text-align: center; }
+        .gallery-item img { max-width: 100%; border-radius: 8px; }
+        .tags { margin-top: 5px; font-size: 0.9em; color: #555; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="index.html">Outfit Generator</a>
+        <a href="wardrobe.html">Wardrobe</a>
+    </div>
+
+    <h1>👗 Senera - Wardrobe</h1>
+    <p>Upload your clothing items and view your wardrobe below.</p>
+    
+    <div class="upload-form">
+        <form id="uploadForm">
+            <label for="imageInput">📷 Upload clothing image:</label><br>
+            <input type="file" id="imageInput" accept="image/*" required><br><br>
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+
+    <div class="gallery" id="gallery">
+        <!-- Wardrobe items will be dynamically loaded here -->
+    </div>
+
+    <script>
+        async function fetchWardrobeItems() {
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = 'Loading...';
+
+            try {
+                const response = await fetch('/wardrobe-items');
+                const items = await response.json();
+
+                gallery.innerHTML = '';
+                items.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'gallery-item';
+                    div.innerHTML = `
+                        <img src="${item.image_url}" alt="${item.type_category}">
+                        <div>${item.type_category}</div>
+                        <div class="tags">${item.tags.join(', ')}</div>
+                    `;
+                    gallery.appendChild(div);
+                });
+            } catch (error) {
+                gallery.innerHTML = 'Failed to load wardrobe items.';
+            }
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('imageInput');
+            if (!fileInput.files[0]) {
+                alert('Please select an image first!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/upload-clothing', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    alert('Image uploaded successfully!');
+                    fetchWardrobeItems(); // Refresh the gallery
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+        });
+
+        // Load wardrobe items on page load
+        fetchWardrobeItems();
+    </script>
+</body>
+</html>
