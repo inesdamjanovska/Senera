@@ -7,6 +7,7 @@ from PIL import Image
 import base64
 import io
 from datetime import datetime
+from services.collage_service import analyze_prompt_for_tags, select_items_for_collage, create_collage, save_collage
 
 def setup_routes(app):
     @app.route('/')
@@ -148,3 +149,124 @@ def setup_routes(app):
     def serve_uploaded_file(filename):
         """Serve uploaded images"""
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+    @app.route('/cleanup-unknown', methods=['DELETE'])
+    def cleanup_unknown_items():
+        """Remove wardrobe items that have unknown type_category or unknown tags"""
+        try:
+            # Find items with unknown type_category
+            unknown_items = WardrobeItem.query.filter_by(type_category='unknown').all()
+            
+            # Also find items that only have 'unknown' tags
+            all_items = WardrobeItem.query.all()
+            items_to_delete = []
+            
+            for item in all_items:
+                # Check if item has unknown type_category
+                if item.type_category == 'unknown':
+                    items_to_delete.append(item)
+                    continue
+                    
+                # Check if item only has unknown tags
+                if item.tags:
+                    all_unknown = all(tag.name == 'unknown' for tag in item.tags)
+                    if all_unknown:
+                        items_to_delete.append(item)
+                else:
+                    # Item has no tags at all, consider it unknown
+                    items_to_delete.append(item)
+            
+            # Remove duplicates
+            items_to_delete = list(set(items_to_delete))
+            
+            deleted_count = len(items_to_delete)
+            
+            # Delete the items
+            for item in items_to_delete:
+                # Clear the many-to-many relationships first
+                item.tags.clear()
+                db.session.delete(item)
+            
+            db.session.commit()
+            
+            return jsonify({
+                'message': f'Successfully removed {deleted_count} unknown items',
+                'deleted_count': deleted_count
+            }), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/analyze-prompt', methods=['POST'])
+    def analyze_outfit_prompt():
+        """Analyze user prompt and return suggested tags"""
+        try:
+            data = request.get_json()
+            user_prompt = data.get('prompt', '')
+            
+            if not user_prompt:
+                return jsonify({'error': 'No prompt provided'}), 400
+            
+            # Get suggested tags from GPT-4o
+            suggested_tags = analyze_prompt_for_tags(user_prompt)
+            
+            return jsonify({
+                'suggested_tags': suggested_tags,
+                'prompt': user_prompt
+            }), 200
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/generate-collage', methods=['POST'])
+    def generate_outfit_collage():
+        """Generate collage from user prompt"""
+        try:
+            data = request.get_json()
+            user_prompt = data.get('prompt', '')
+            
+            if not user_prompt:
+                return jsonify({'error': 'No prompt provided'}), 400
+            
+            print(f"Generating collage for prompt: {user_prompt}")
+            
+            # Step 1: Analyze prompt to get target tags
+            target_tags = analyze_prompt_for_tags(user_prompt)
+            print(f"Target tags: {target_tags}")
+            
+            # Step 2: Select items from wardrobe based on tags
+            selected_items = select_items_for_collage(target_tags)
+            print(f"Selected items: {[(k, len(v)) for k, v in selected_items.items()]}")
+            
+            # Step 3: Create collage image
+            collage_image = create_collage(selected_items)
+            
+            # Step 4: Save collage
+            from datetime import datetime
+            timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+            collage_filename = f"collage_{timestamp}.png"
+            collage_path = save_collage(collage_image, collage_filename)
+            
+            # Step 5: Return collage info and selected items details
+            items_details = {}
+            for category, items in selected_items.items():
+                items_details[category] = []
+                for item in items:
+                    items_details[category].append({
+                        'id': item.id,
+                        'image_url': item.image_url,
+                        'type_category': item.type_category,
+                        'tags': [tag.name for tag in item.tags]
+                    })
+            
+            return jsonify({
+                'collage_url': f"/uploads/{collage_filename}",
+                'target_tags': target_tags,
+                'selected_items': items_details,
+                'message': f'Collage generated with {sum(len(items) for items in selected_items.values())} items'
+            }), 200
+            
+        except Exception as e:
+            print(f"Error generating collage: {e}")
+            return jsonify({'error': str(e)}), 500

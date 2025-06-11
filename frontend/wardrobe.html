@@ -38,6 +38,8 @@
         <!-- Wardrobe items will be dynamically loaded here -->
     </div>
 
+    <button id="cleanupBtn" class="cleanup-btn">Remove Unknown Items</button>
+    
     <script>
         async function fetchWardrobeItems() {
             const gallery = document.getElementById('gallery');
@@ -90,6 +92,27 @@
                 }
             } catch (error) {
                 alert('Network error: ' + error.message);
+            }
+        });
+
+        document.getElementById('cleanupBtn').addEventListener('click', async function() {
+            if (confirm('Are you sure you want to remove all items with unknown tags? This cannot be undone.')) {
+                try {
+                    const response = await fetch('/cleanup-unknown', {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        alert(`Successfully removed ${result.deleted_count} unknown items`);
+                        fetchWardrobeItems(); // Refresh the gallery
+                    } else {
+                        alert('Failed to cleanup unknown items');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error cleaning up unknown items');
+                }
             }
         });
 

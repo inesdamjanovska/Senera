@@ -24,22 +24,53 @@
     </div>
 
     <h1>🎨 Senera - AI Outfit Generator</h1>
-    <p>Upload an image of clothing items and get AI-generated outfit photos!</p>
+    <p>Generate outfits from your wardrobe using AI!</p>
     
+    <!-- New: Prompt-based collage generation -->
     <div class="upload-form">
+        <h3>📝 Generate Outfit from Prompt</h3>
+        <form id="promptForm">
+            <div>
+                <label for="promptInput">💭 Describe your desired outfit:</label><br>
+                <input type="text" id="promptInput" placeholder="e.g., casual coffee outfit, formal business meeting, summer beach day" required>
+            </div>
+            <button type="submit">🔍 Generate Outfit Collage</button>
+        </form>
+        
+        <div class="loading" id="promptLoading" style="display: none;">
+            ⏳ Analyzing your wardrobe and creating outfit collage...
+        </div>
+    </div>
+    
+    <!-- Display generated collage -->
+    <div class="result" id="collageResult" style="display: none;">
+        <h3>👕 Your Outfit Collage:</h3>
+        <img id="collageImage" class="outfit-image" alt="Generated outfit collage">
+        <div id="collageDetails" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+            <p><strong>Selected items:</strong> <span id="itemCount"></span></p>
+            <p><strong>Categories:</strong> <span id="categories"></span></p>
+        </div>
+        <button id="generateOutfitBtn" style="margin-top: 15px;">✨ Generate Final Outfit Photo</button>
+    </div>
+    
+    <hr style="margin: 40px 0;">
+    
+    <!-- Original: Upload collage method -->
+    <div class="upload-form">
+        <h3>📷 Or Upload Your Own Collage</h3>
         <form id="outfitForm">
             <div>
-                <label for="imageInput">📷 Upload clothing image:</label><br>
-                <input type="file" id="imageInput" accept="image/*" required>
+                <label for="imageInput">📷 Upload clothing collage:</label><br>
+                <input type="file" id="imageInput" accept="image/*">
             </div>
             <div>
-                <label for="promptInput">💭 Outfit style:</label><br>
-                <input type="text" id="promptInput" placeholder="e.g., Casual spring outfit for a picnic" value="Casual and stylish">
+                <label for="stylePrompt">💭 Outfit style:</label><br>
+                <input type="text" id="stylePrompt" placeholder="e.g., Casual spring outfit for a picnic" value="Casual and stylish">
             </div>
             <button type="submit">✨ Generate Outfit Photo</button>
         </form>
         
-        <div class="loading" id="loading">
+        <div class="loading" id="loading" style="display: none;">
             ⏳ AI is analyzing clothes and generating outfit photo... (this may take 20-30 seconds)
         </div>
     </div>
@@ -50,11 +81,112 @@
     </div>
 
     <script>
+        let currentCollageUrl = null;
+        
+        // Handle prompt-based collage generation
+        document.getElementById('promptForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const promptInput = document.getElementById('promptInput');
+            const loading = document.getElementById('promptLoading');
+            const result = document.getElementById('collageResult');
+            const collageImage = document.getElementById('collageImage');
+            const itemCount = document.getElementById('itemCount');
+            const categories = document.getElementById('categories');
+            
+            if (!promptInput.value.trim()) {
+                alert('Please enter a prompt!');
+                return;
+            }
+            
+            // Show loading state
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            
+            try {
+                const response = await fetch('/generate-collage', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: promptInput.value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentCollageUrl = data.collage_url;
+                    collageImage.src = data.collage_url;
+                    
+                    // Display details
+                    const totalItems = Object.values(data.selected_items).reduce((sum, items) => sum + items.length, 0);
+                    itemCount.textContent = totalItems;
+                    categories.textContent = Object.keys(data.selected_items).join(', ');
+                    
+                    result.style.display = 'block';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+        
+        // Handle generating final outfit from collage
+        document.getElementById('generateOutfitBtn').addEventListener('click', async function() {
+            if (!currentCollageUrl) {
+                alert('No collage available. Please generate a collage first.');
+                return;
+            }
+            
+            const promptInput = document.getElementById('promptInput');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const outfitImage = document.getElementById('outfitImage');
+            
+            // Show loading state
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            
+            try {
+                // Convert collage URL to blob and create FormData
+                const collageResponse = await fetch(currentCollageUrl);
+                const collageBlob = await collageResponse.blob();
+                
+                const formData = new FormData();
+                formData.append('image', collageBlob, 'collage.png');
+                formData.append('prompt', promptInput.value);
+                
+                const response = await fetch('/generate-outfit', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    outfitImage.src = data.outfit_image;
+                    result.style.display = 'block';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+        
+        // Original upload form handler (unchanged)
         document.getElementById('outfitForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const fileInput = document.getElementById('imageInput');
-            const promptInput = document.getElementById('promptInput');
+            const stylePrompt = document.getElementById('stylePrompt');
             const loading = document.getElementById('loading');
             const result = document.getElementById('result');
             const outfitImage = document.getElementById('outfitImage');
@@ -71,7 +203,7 @@
             try {
                 const formData = new FormData();
                 formData.append('image', fileInput.files[0]);
-                formData.append('prompt', promptInput.value);
+                formData.append('prompt', stylePrompt.value);
                 
                 const response = await fetch('/generate-outfit', {
                     method: 'POST',
