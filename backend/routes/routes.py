@@ -85,17 +85,42 @@ def setup_routes(app):
             wardrobe_item = WardrobeItem(
                 user_id=1,  # Default user ID for now
                 image_url=f"/uploads/{os.path.basename(resized_path)}",
-                type_category=tags.get('type', 'unknown'),
+                type_category=tags.get('type_category', 'unknown'),
                 timestamp=datetime.utcnow()
             )
             db.session.add(wardrobe_item)
             db.session.commit()
 
             # Add tags to the many-to-many relationship
-            for tag_name in tags.get('tags', []):
+            all_tags = []
+            
+            # Add type and color as single tags
+            if tags.get('type'):
+                all_tags.append(('type', tags['type']))
+            if tags.get('color'):
+                all_tags.append(('color', tags['color']))
+            
+            # Add style, season, and occasion as lists
+            for style_tag in tags.get('style', []):
+                all_tags.append(('style', style_tag))
+            for season_tag in tags.get('season', []):
+                all_tags.append(('season', season_tag))
+            for occasion_tag in tags.get('occasion', []):
+                all_tags.append(('occasion', occasion_tag))
+            
+            # Save all tags
+            for category, tag_name in all_tags:
                 tag = Tag.query.filter_by(name=tag_name).first()
-                if tag:
+                if not tag:
+                    # Create the tag if it doesn't exist
+                    tag = Tag(name=tag_name, category=category)
+                    db.session.add(tag)
+                    db.session.commit()
+                
+                # Add to wardrobe item if not already added
+                if tag not in wardrobe_item.tags:
                     wardrobe_item.tags.append(tag)
+            
             db.session.commit()
 
             return jsonify({'message': 'Clothing item uploaded successfully!'}), 200
@@ -118,3 +143,8 @@ def setup_routes(app):
             return jsonify(items), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+    @app.route('/uploads/<filename>')
+    def serve_uploaded_file(filename):
+        """Serve uploaded images"""
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)

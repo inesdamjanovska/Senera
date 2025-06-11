@@ -1,12 +1,15 @@
 import os
 import base64
 import requests
-from flask import request, jsonify
+from flask import request, jsonify, Flask, send_from_directory
 from PIL import Image
 from dotenv import load_dotenv
 import json  # Import json module
 
 load_dotenv()
+
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 
 def resize_image(image_path, max_size=512):
     """Resize image to reduce token usage."""
@@ -66,19 +69,29 @@ def tag_image(image_data, prompt):
 def parse_tags(response):
     """Parse the GPT-4o response to extract tags."""
     try:
-        # Attempt to parse the response as JSON
+        # If the response is already a dictionary, return it directly
+        if isinstance(response, dict):
+            return response
+        
+        # Handle markdown code block format
+        if isinstance(response, str):
+            # Remove markdown code block formatting
+            response = response.strip()
+            if response.startswith('```json'):
+                response = response[7:]  # Remove ```json
+            if response.startswith('```'):
+                response = response[3:]   # Remove ```
+            if response.endswith('```'):
+                response = response[:-3]  # Remove closing ```
+            response = response.strip()
+        
+        # Parse the cleaned JSON
         tags = json.loads(response)
-        return {
-            'type': tags.get('type', 'unknown'),
-            'type_category': tags.get('type_category', 'unknown'),
-            'color': tags.get('color', 'unknown'),
-            'style': tags.get('style', []),
-            'season': tags.get('season', []),
-            'occasion': tags.get('occasion', [])
-        }
-    except json.JSONDecodeError:
+        return tags
+    except json.JSONDecodeError as e:
         # If the response is not JSON, return an error
-        print("Error: GPT-4o response is not in JSON format.")
+        print(f"Error: GPT-4o response is not in JSON format. Error: {e}")
+        print(f"Response content: {response}")
         return {
             'type': 'unknown',
             'type_category': 'unknown',
@@ -184,3 +197,4 @@ def generate_outfit():
             os.remove(filepath)
         if resized_filepath and os.path.exists(resized_filepath):
             os.remove(resized_filepath)
+
