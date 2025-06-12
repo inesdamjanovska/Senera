@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 from db.models import WardrobeItem, Tag, db
 from services.services import tag_image
 from collections import defaultdict
+import base64
 
 def analyze_prompt_for_tags(user_prompt):
     """Send user prompt to GPT-4o to extract relevant tags for outfit selection"""
@@ -265,3 +266,116 @@ def save_collage(collage_image, filename="collage.png"):
     # Save with optimal settings for GPT-4o
     collage_image.save(filepath, 'PNG', optimize=True, compress_level=6)
     return filepath
+
+def generate_outfit_from_collage(collage_path, user_prompt):
+    """Send collage image to DALL-E to generate outfit photo"""
+    api_key = os.getenv('OPENAI_API_KEY')
+    
+    # Encode image to base64
+    with open(collage_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+    
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+    
+    # Enhanced GPT-4o analysis to SELECT the best matching items
+    analyze_payload = {
+        "model": "gpt-4o",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"""You are a professional fashion stylist. Analyze this clothing collage and SELECT the best combination of items that would create a stylish, cohesive outfit for: "{user_prompt}"
+
+FROM ALL THE ITEMS SHOWN, choose only 3-5 pieces that work best together and would create the most fashionable outfit.
+
+For your SELECTED items only, provide extremely detailed descriptions:
+
+1. EXACT CLOTHING TYPES: Identify each selected piece precisely (e.g., "crew neck cotton t-shirt", "high-waisted straight-leg jeans", "white canvas sneakers")
+
+2. COLORS & PATTERNS: Describe exact colors, patterns, textures (e.g., "navy blue", "faded light blue denim", "solid white")
+
+3. STYLE DETAILS: Note specific design elements (e.g., "button-front", "rolled cuffs", "minimalist design")
+
+4. FIT & SILHOUETTE: How items should fit together (e.g., "fitted top with relaxed jeans", "oversized sweater tucked into high-waisted pants")
+
+5. WHY THESE WORK TOGETHER: Briefly explain why this combination creates a cohesive look
+
+Focus on creating ONE perfect outfit that matches the "{user_prompt}" style. Ignore items that don't fit well with your selection."""
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{encoded_image}"
+                        }
+                    }
+                ]
+            }
+        ],
+        "max_tokens": 450
+    }
+    
+    # Get detailed clothing description from GPT-4o
+    analyze_response = requests.post(
+        'https://api.openai.com/v1/chat/completions',
+        headers=headers,
+        json=analyze_payload
+    )
+    
+    if analyze_response.status_code != 200:
+        raise Exception(f"GPT-4o analysis error: {analyze_response.text}")
+    
+    clothing_description = analyze_response.json()['choices'][0]['message']['content']
+    print(f"Selected outfit description: {clothing_description}")
+    
+    # Enhanced DALL-E prompt for professional boutique-style photography
+    dalle_prompt = f"""Professional fashion e-commerce photography of a single model wearing the selected outfit.
+
+SELECTED OUTFIT: {clothing_description}
+
+STYLE GOAL: {user_prompt}
+
+PHOTOGRAPHY REQUIREMENTS:
+- ONE model only(caucasian), no duplicates or multiple perspectives
+- Clean white background, completely plain and seamless
+- Professional studio lighting with soft, even illumination
+- NO harsh shadows, NO dramatic lighting effects
+- Full body shot showing the complete outfit clearly
+- Model standing naturally, facing forward in a confident pose
+- Sharp, crystal-clear image quality like high-end fashion websites
+- Boutique catalog style photography
+- Professional fashion model with appropriate styling
+- Clothing should be the main focus and clearly visible
+- Clean, minimalist aesthetic like Zara, H&M, or ASOS product photos
+- Model should look natural and approachable
+
+AVOID: Multiple models, busy backgrounds, shadows, dramatic poses, artistic effects, multiple angles, blurry quality, low resolution."""
+    
+    print(f"DALL-E prompt: {dalle_prompt}")
+    
+    # Generate outfit image with DALL-E 3
+    dalle_payload = {
+        "model": "dall-e-3",
+        "prompt": dalle_prompt,
+        "size": "1024x1024",
+        "quality": "hd",
+        "style": "natural",
+        "n": 1
+    }
+    
+    dalle_response = requests.post(
+        'https://api.openai.com/v1/images/generations',
+        headers=headers,
+        json=dalle_payload  # ✅ Fixed: was dalle_response, now dalle_payload
+    )
+    
+    if dalle_response.status_code == 200:
+        result = dalle_response.json()
+        outfit_image_url = result['data'][0]['url']
+        return outfit_image_url
+    else:
+        raise Exception(f"DALL-E error: {dalle_response.text}")

@@ -7,7 +7,7 @@ from PIL import Image
 import base64
 import io
 from datetime import datetime
-from services.collage_service import analyze_prompt_for_tags, select_items_for_collage, create_collage, save_collage
+from services.collage_service import analyze_prompt_for_tags, select_items_for_collage, create_collage, save_collage, generate_outfit_from_collage
 
 def setup_routes(app):
     @app.route('/')
@@ -219,9 +219,71 @@ def setup_routes(app):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
     
+    @app.route('/generate-complete-outfit', methods=['POST'])
+    def generate_complete_outfit():
+        """Generate both collage and final outfit in one step"""
+        try:
+            data = request.get_json()
+            user_prompt = data.get('prompt', '')
+            
+            if not user_prompt:
+                return jsonify({'error': 'No prompt provided'}), 400
+            
+            print(f"Generating complete outfit for prompt: {user_prompt}")
+            
+            # Step 1: Analyze prompt to get target tags
+            target_tags = analyze_prompt_for_tags(user_prompt)
+            print(f"Target tags: {target_tags}")
+            
+            # Step 2: Select items from wardrobe based on tags
+            selected_items = select_items_for_collage(target_tags)
+            print(f"Selected items: {[(k, len(v)) for k, v in selected_items.items()]}")
+            
+            if not selected_items or sum(len(items) for items in selected_items.values()) == 0:
+                return jsonify({'error': 'No matching items found in your wardrobe for this prompt'}), 404
+            
+            # Step 3: Create collage image
+            collage_image = create_collage(selected_items)
+            
+            # Step 4: Save collage
+            timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+            collage_filename = f"collage_{timestamp}.png"
+            collage_path = save_collage(collage_image, collage_filename)
+            print(f"Collage saved: {collage_path}")
+            
+            # Step 5: Generate outfit image from collage using DALL-E
+            print("Generating outfit image with DALL-E...")
+            outfit_image_url = generate_outfit_from_collage(collage_path, user_prompt)
+            print(f"Outfit generated: {outfit_image_url}")
+            
+            # Step 6: Prepare response with selected items details
+            items_details = {}
+            for category, items in selected_items.items():
+                items_details[category] = []
+                for item in items:
+                    items_details[category].append({
+                        'id': item.id,
+                        'image_url': item.image_url,
+                        'type_category': item.type_category,
+                        'tags': [tag.name for tag in item.tags]
+                    })
+            
+            return jsonify({
+                'collage_url': f"/uploads/{collage_filename}",
+                'outfit_image_url': outfit_image_url,
+                'target_tags': target_tags,
+                'selected_items': items_details,
+                'message': f'Complete outfit generated with {sum(len(items) for items in selected_items.values())} items'
+            }), 200
+            
+        except Exception as e:
+            print(f"Error generating complete outfit: {e}")
+            return jsonify({'error': str(e)}), 500
+    
+    # Keep the original generate-collage route for backward compatibility
     @app.route('/generate-collage', methods=['POST'])
     def generate_outfit_collage():
-        """Generate collage from user prompt"""
+        """Generate collage only (legacy route)"""
         try:
             data = request.get_json()
             user_prompt = data.get('prompt', '')
@@ -243,7 +305,6 @@ def setup_routes(app):
             collage_image = create_collage(selected_items)
             
             # Step 4: Save collage
-            from datetime import datetime
             timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
             collage_filename = f"collage_{timestamp}.png"
             collage_path = save_collage(collage_image, collage_filename)
