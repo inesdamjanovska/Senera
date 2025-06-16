@@ -93,13 +93,13 @@ def score_item_relevance(item, target_tags):
     
     return score
 
-def select_items_for_collage(target_tags, max_per_category=3):
-    """Select wardrobe items based on target tags"""
-    # Get items by type category
+def select_items_for_collage(target_tags, user_id, max_per_category=3):
+    """Select wardrobe items based on target tags for specific user only"""
+    # Get items by type category for the specific user
     items_by_category = defaultdict(list)
     
-    # Query all wardrobe items
-    all_items = WardrobeItem.query.all()
+    # Query wardrobe items for the specific user only
+    all_items = WardrobeItem.query.filter_by(user_id=user_id).all()
     
     for item in all_items:
         items_by_category[item.type_category].append(item)
@@ -340,16 +340,14 @@ SELECTED OUTFIT: {clothing_description}
 STYLE GOAL: {user_prompt}
 
 PHOTOGRAPHY REQUIREMENTS:
-- ONE model only(caucasian), no duplicates or multiple perspectives
+- ONE beautiful model only(white), no duplicates or multiple perspectives
 - Clean white background, completely plain and seamless
-- Professional studio lighting with soft, even illumination
 - NO harsh shadows, NO dramatic lighting effects
 - Full body shot showing the complete outfit clearly
 - Model standing naturally, facing forward in a confident pose
 - Sharp, crystal-clear image quality like high-end fashion websites
 - Boutique catalog style photography
-- Professional fashion model with appropriate styling
-- Clothing should be the main focus and clearly visible
+- Clothing should be the main focus and clearly visible as desribed
 - Clean, minimalist aesthetic like Zara, H&M, or ASOS product photos
 - Model should look natural and approachable
 
@@ -370,7 +368,7 @@ AVOID: Multiple models, busy backgrounds, shadows, dramatic poses, artistic effe
     dalle_response = requests.post(
         'https://api.openai.com/v1/images/generations',
         headers=headers,
-        json=dalle_payload  # ✅ Fixed: was dalle_response, now dalle_payload
+        json=dalle_payload
     )
     
     if dalle_response.status_code == 200:

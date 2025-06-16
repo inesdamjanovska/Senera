@@ -1,5 +1,8 @@
+from flask import request, jsonify, session, send_from_directory
+from db.models import User, db
+import re
 from flask import send_from_directory, request, jsonify
-from services.services import generate_outfit, resize_image, tag_image, parse_tags
+from services.services import resize_image, tag_image, parse_tags
 from db.models import WardrobeItem, Tag, WardrobeItemTag, db
 import os
 from rembg import remove
@@ -8,6 +11,7 @@ import base64
 import io
 from datetime import datetime
 from services.collage_service import analyze_prompt_for_tags, select_items_for_collage, create_collage, save_collage, generate_outfit_from_collage
+from .auth_routes import require_login, get_current_user_id
 
 def setup_routes(app):
     @app.route('/')
@@ -22,12 +26,13 @@ def setup_routes(app):
     def serve_wardrobe_html():
         return send_from_directory('../frontend', 'wardrobe.html')
 
-    @app.route('/generate-outfit', methods=['POST'])
-    def generate_outfit_route():
-        return generate_outfit()
-
     @app.route('/upload-clothing', methods=['POST'])
     def upload_clothing():
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
+            
         try:
             if 'image' not in request.files:
                 return jsonify({'error': 'No image uploaded'}), 400
@@ -82,9 +87,10 @@ def setup_routes(app):
             # Parse the tags
             tags = parse_tags(tags_response)
 
-            # Save the item and tags to the database
+            # Save the item and tags to the database with current user ID
+            current_user_id = get_current_user_id()
             wardrobe_item = WardrobeItem(
-                user_id=1,  # Default user ID for now
+                user_id=current_user_id,  # Use actual logged-in user ID
                 image_url=f"/uploads/{os.path.basename(resized_path)}",
                 type_category=tags.get('type_category', 'unknown'),
                 timestamp=datetime.utcnow()
@@ -131,8 +137,16 @@ def setup_routes(app):
 
     @app.route('/wardrobe-items', methods=['GET'])
     def get_wardrobe_items():
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
+            
         try:
-            wardrobe_items = WardrobeItem.query.all()
+            # Filter wardrobe items by current user only
+            current_user_id = get_current_user_id()
+            wardrobe_items = WardrobeItem.query.filter_by(user_id=current_user_id).all()
+            
             items = []
             for item in wardrobe_items:
                 items.append({
@@ -152,13 +166,23 @@ def setup_routes(app):
 
     @app.route('/cleanup-unknown', methods=['DELETE'])
     def cleanup_unknown_items():
-        """Remove wardrobe items that have unknown type_category or unknown tags"""
-        try:
-            # Find items with unknown type_category
-            unknown_items = WardrobeItem.query.filter_by(type_category='unknown').all()
+        """Remove wardrobe items that have unknown type_category or unknown tags for current user only"""
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
             
-            # Also find items that only have 'unknown' tags
-            all_items = WardrobeItem.query.all()
+        try:
+            current_user_id = get_current_user_id()
+            
+            # Find items with unknown type_category for current user
+            unknown_items = WardrobeItem.query.filter_by(
+                user_id=current_user_id, 
+                type_category='unknown'
+            ).all()
+            
+            # Also find items that only have 'unknown' tags for current user
+            all_items = WardrobeItem.query.filter_by(user_id=current_user_id).all()
             items_to_delete = []
             
             for item in all_items:
@@ -201,6 +225,11 @@ def setup_routes(app):
     @app.route('/analyze-prompt', methods=['POST'])
     def analyze_outfit_prompt():
         """Analyze user prompt and return suggested tags"""
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
+            
         try:
             data = request.get_json()
             user_prompt = data.get('prompt', '')
@@ -221,7 +250,12 @@ def setup_routes(app):
     
     @app.route('/generate-complete-outfit', methods=['POST'])
     def generate_complete_outfit():
-        """Generate both collage and final outfit in one step"""
+        """Generate both collage and final outfit in one step for current user only"""
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
+            
         try:
             data = request.get_json()
             user_prompt = data.get('prompt', '')
@@ -235,8 +269,9 @@ def setup_routes(app):
             target_tags = analyze_prompt_for_tags(user_prompt)
             print(f"Target tags: {target_tags}")
             
-            # Step 2: Select items from wardrobe based on tags
-            selected_items = select_items_for_collage(target_tags)
+            # Step 2: Select items from current user's wardrobe only
+            current_user_id = get_current_user_id()
+            selected_items = select_items_for_collage(target_tags, current_user_id)
             print(f"Selected items: {[(k, len(v)) for k, v in selected_items.items()]}")
             
             if not selected_items or sum(len(items) for items in selected_items.values()) == 0:
@@ -283,7 +318,12 @@ def setup_routes(app):
     # Keep the original generate-collage route for backward compatibility
     @app.route('/generate-collage', methods=['POST'])
     def generate_outfit_collage():
-        """Generate collage only (legacy route)"""
+        """Generate collage only (legacy route) for current user only"""
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
+            
         try:
             data = request.get_json()
             user_prompt = data.get('prompt', '')
@@ -297,8 +337,9 @@ def setup_routes(app):
             target_tags = analyze_prompt_for_tags(user_prompt)
             print(f"Target tags: {target_tags}")
             
-            # Step 2: Select items from wardrobe based on tags
-            selected_items = select_items_for_collage(target_tags)
+            # Step 2: Select items from current user's wardrobe only
+            current_user_id = get_current_user_id()
+            selected_items = select_items_for_collage(target_tags, current_user_id)
             print(f"Selected items: {[(k, len(v)) for k, v in selected_items.items()]}")
             
             # Step 3: Create collage image

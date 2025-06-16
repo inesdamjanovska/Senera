@@ -7,4 +7,8 @@ class Config:
     UPLOAD_FOLDER = 'uploads'
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'senera.db')}"
-    SQLALCHEMY_TRACK_MODIFICATIONS = False  # Disable modification tracking to save resources
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+    SESSION_TYPE = 'filesystem'
+    SESSION_PERMANENT = False
+    SESSION_USE_SIGNER = True
