@@ -131,8 +131,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 30,
+    paddingTop: 15,
+    paddingBottom: 15,
     paddingHorizontal: 20,
   },
   headerContent: {
@@ -145,10 +145,10 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
   userName: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 5,
+    marginBottom: 4,
   },
   tagline: {
     fontSize: 14,

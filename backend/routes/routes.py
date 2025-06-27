@@ -53,11 +53,23 @@ def setup_routes(app):
             output_image = remove(input_image)
             print("Background removed successfully")
 
-            # Save the cleaned-up image
+            # Convert to PIL Image and apply light background
+            # Load the image with transparent background
+            img_with_transparency = Image.open(io.BytesIO(output_image)).convert('RGBA')
+            
+            # Create a light grey background
+            background = Image.new('RGB', img_with_transparency.size, (248, 248, 248))  # Light grey
+            
+            # Composite the transparent image onto the background
+            final_image = Image.alpha_composite(
+                background.convert('RGBA'), 
+                img_with_transparency
+            ).convert('RGB')
+
+            # Save the cleaned-up image with light background
             cleaned_path = os.path.join(app.config['UPLOAD_FOLDER'], f"cleaned_{filename}")
-            with open(cleaned_path, 'wb') as output_file:
-                output_file.write(output_image)
-            print(f"Cleaned image saved at {cleaned_path}")
+            final_image.save(cleaned_path, 'PNG')
+            print(f"Cleaned image with light background saved at {cleaned_path}")
 
             # Resize and standardize the image
             resized_path = resize_image(cleaned_path)

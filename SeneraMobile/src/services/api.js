@@ -27,7 +27,6 @@ export const wardrobeAPI = {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
   getWardrobeItems: () => api.get('/wardrobe-items'),
-  cleanupUnknown: () => api.delete('/cleanup-unknown'),
   deleteItem: (itemId) => api.delete(`/wardrobe-items/${itemId}`),
   deleteItems: (itemIds) => api.delete('/wardrobe-items', { data: { item_ids: itemIds } }),
 };

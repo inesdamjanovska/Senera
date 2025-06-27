@@ -42,11 +42,11 @@ const WardrobeScreen = () => {
   // Map frontend categories to backend categories
   const categoryMap = {
     'All': null,
-    'Tops': ['top', 'shirt', 'blouse', 'sweater', 'jacket', 'coat'],
-    'Bottoms': ['bottom', 'pants', 'jeans', 'shorts', 'skirt', 'dress'],
-    'Shoes': ['shoes', 'sneakers', 'boots', 'sandals', 'heels'],
-    'Accessories': ['accessories', 'bag', 'hat', 'jewelry', 'belt', 'scarf'],
-    'Outerwear': ['outerwear', 'jacket', 'coat', 'blazer', 'cardigan']
+    'Tops': ['top'],
+    'Bottoms': ['bottom'], 
+    'Shoes': ['footwear'],
+    'Accessories': ['accessory'],
+    'Outerwear': ['outerwear']
   };
   
   // Multi-select states
@@ -308,11 +308,12 @@ const WardrobeScreen = () => {
     if (!hasPermission) return;
 
     Alert.alert(
-      'Select Image',
-      'Choose how you want to add a clothing item',
+      'Add Clothing Items',
+      'Choose how you want to add clothing items',
       [
-        { text: 'Camera', onPress: () => openCamera() },
-        { text: 'Photo Library', onPress: () => openImagePicker() },
+        { text: 'Take Photo', onPress: () => openCamera() },
+        { text: 'Select One Photo', onPress: () => openImagePicker() },
+        { text: 'Select Multiple Photos', onPress: () => openMultipleImagePicker() },
         { text: 'Cancel', style: 'cancel' },
       ]
     );
@@ -350,6 +351,19 @@ const WardrobeScreen = () => {
     }
   };
 
+  const openMultipleImagePicker = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.8,
+      selectionLimit: 10, // Limit to 10 images at once
+    });
+
+    if (!result.canceled && result.assets) {
+      uploadMultipleImages(result.assets);
+    }
+  };
+
   const uploadImage = async (imageAsset) => {
     try {
       setIsUploading(true);
@@ -374,27 +388,44 @@ const WardrobeScreen = () => {
     }
   };
 
-  const cleanupUnknownItems = async () => {
-    Alert.alert(
-      'Clean Up Unknown Items',
-      'This will remove all items with unknown categories or tags. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await wardrobeAPI.cleanupUnknown();
-              Alert.alert('Success', response.data.message);
-              await loadWardrobeItems();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to clean up items');
-            }
-          },
-        },
-      ]
-    );
+  const uploadMultipleImages = async (imageAssets) => {
+    try {
+      setIsUploading(true);
+      const totalImages = imageAssets.length;
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < imageAssets.length; i++) {
+        try {
+          const formData = new FormData();
+          formData.append('image', {
+            uri: imageAssets[i].uri,
+            type: 'image/jpeg',
+            name: `clothing_${i + 1}.jpg`,
+          });
+
+          await wardrobeAPI.uploadClothing(formData);
+          successCount++;
+        } catch (error) {
+          console.error(`Upload error for image ${i + 1}:`, error);
+          errorCount++;
+        }
+      }
+
+      const message = `Uploaded ${successCount} of ${totalImages} images successfully.`;
+      if (errorCount > 0) {
+        Alert.alert('Upload Complete', `${message}\n${errorCount} uploads failed.`);
+      } else {
+        Alert.alert('Success!', message);
+      }
+      
+      await loadWardrobeItems(); // Refresh the wardrobe
+    } catch (error) {
+      console.error('Multiple upload error:', error);
+      Alert.alert('Upload Failed', 'Failed to upload multiple images');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Render category navbar
@@ -712,39 +743,14 @@ const WardrobeScreen = () => {
 
       {/* Content based on active tab */}
       {activeTab === 'clothes' ? (
-        <>
+        <View style={styles.contentContainer}>
           {/* Category Navigation */}
           {!selectionMode && renderCategoryNavbar()}
-
-          {/* Upload Button */}
-          {!selectionMode && (
-            <TouchableOpacity
-              style={[styles.uploadButton, isUploading && styles.uploadButtonDisabled]}
-              onPress={pickImage}
-              disabled={isUploading}
-            >
-              <Ionicons 
-                name={isUploading ? "hourglass-outline" : "camera-outline"} 
-                size={24} 
-                color="white" 
-              />
-              <Text style={styles.uploadButtonText}>
-                {isUploading ? 'Uploading...' : 'Add New Item'}
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Cleanup Button */}
-          {!selectionMode && wardrobeItems.length > 0 && (
-            <TouchableOpacity style={styles.cleanupButton} onPress={cleanupUnknownItems}>
-              <Ionicons name="trash-outline" size={20} color="white" />
-              <Text style={styles.cleanupButtonText}>Clean Up Unknown</Text>
-            </TouchableOpacity>
-          )}
 
           {/* Wardrobe Items Grid */}
           <ScrollView
             style={styles.scrollView}
+            contentContainerStyle={styles.scrollContentContainer}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
@@ -757,7 +763,7 @@ const WardrobeScreen = () => {
                 </Text>
                 <Text style={styles.emptySubtitle}>
                   {selectedCategory === 'All' 
-                    ? 'Tap "Add New Item" to start building your digital wardrobe!' 
+                    ? 'Tap "Add New Items" to start building your digital wardrobe!' 
                     : `Try selecting a different category or add some ${selectedCategory.toLowerCase()}`
                   }
                 </Text>
@@ -768,7 +774,27 @@ const WardrobeScreen = () => {
               </View>
             )}
           </ScrollView>
-        </>
+
+          {/* Upload Button - Moved to Bottom */}
+          {!selectionMode && (
+            <View style={styles.bottomButtonContainer}>
+              <TouchableOpacity
+                style={[styles.uploadButton, isUploading && styles.uploadButtonDisabled]}
+                onPress={pickImage}
+                disabled={isUploading}
+              >
+                <Ionicons 
+                  name={isUploading ? "hourglass-outline" : "add-outline"} 
+                  size={24} 
+                  color="white" 
+                />
+                <Text style={styles.uploadButtonText}>
+                  {isUploading ? 'Uploading...' : 'Add New Items'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       ) : (
         /* Saved Outfits Tab */
         <ScrollView
@@ -912,14 +938,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#007bff',
-    margin: 15,
-    padding: 15,
-    borderRadius: 10,
+    padding: 18,
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 6,
   },
   uploadButtonDisabled: {
     backgroundColor: '#ccc',
@@ -930,26 +955,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 10,
   },
-  cleanupButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#dc3545',
-    marginHorizontal: 15,
-    marginBottom: 15,
-    padding: 10,
-    borderRadius: 8,
-  },
-  cleanupButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 5,
-  },
 
   // Content
+  contentContainer: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
+  },
+  scrollContentContainer: {
+    paddingBottom: 100, // Add padding to prevent overlap with the button
+  },
+  bottomButtonContainer: {
+    position: 'absolute',
+    bottom: 65, // Moved down a few pixels to reduce gap with navbar
+    left: 0,
+    right: 0,
+    padding: 15,
+    backgroundColor: '#f8f9fa',
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
   },
   emptyContainer: {
     flex: 1,
@@ -969,6 +994,13 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     paddingHorizontal: 40,
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  scrollContentContainer: {
+    paddingBottom: 80, // Add padding to prevent overlap with the button
   },
 
   // Simplified Item Grids

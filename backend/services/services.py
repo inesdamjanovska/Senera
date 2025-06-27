@@ -12,11 +12,43 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 
 def resize_image(image_path, max_size=512):
-    """Resize image to reduce token usage."""
+    """Resize image to make it square with borders and apply white background."""
     with Image.open(image_path) as img:
-        img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-        output_path = image_path.replace('.jpg', '_resized.jpg')
-        img.convert('RGB').save(output_path, 'JPEG', quality=85, optimize=True)
+        # Convert to RGBA if not already
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        
+        # Create a white background
+        background = Image.new('RGB', img.size, (248, 248, 248))  # Light grey background
+        
+        # Composite the image onto the background
+        background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+        img = background
+        
+        # Calculate size to fit within max_size while maintaining aspect ratio
+        original_width, original_height = img.size
+        
+        # Calculate the scaling factor
+        scale = min(max_size / original_width, max_size / original_height)
+        new_width = int(original_width * scale)
+        new_height = int(original_height * scale)
+        
+        # Resize the image
+        img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Create a square canvas with light grey background
+        square_img = Image.new('RGB', (max_size, max_size), (248, 248, 248))  # Light grey
+        
+        # Calculate position to center the image
+        x_offset = (max_size - new_width) // 2
+        y_offset = (max_size - new_height) // 2
+        
+        # Paste the resized image onto the square canvas
+        square_img.paste(img_resized, (x_offset, y_offset))
+        
+        # Save the processed image
+        output_path = image_path.replace('.png', '_resized.jpg').replace('.jpg', '_resized.jpg')
+        square_img.save(output_path, 'JPEG', quality=85, optimize=True)
         return output_path
 
 def tag_image(image_data, prompt):
