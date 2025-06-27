@@ -3,7 +3,7 @@ from db.models import User, db
 import re
 from flask import send_from_directory, request, jsonify
 from services.services import resize_image, tag_image, parse_tags
-from db.models import WardrobeItem, Tag, WardrobeItemTag, db
+from db.models import WardrobeItem, Tag, WardrobeItemTag, SavedOutfit, db
 import os
 from rembg import remove
 from PIL import Image
@@ -371,4 +371,260 @@ def setup_routes(app):
             
         except Exception as e:
             print(f"Error generating collage: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/save-outfit', methods=['POST'])
+    def save_outfit():
+        """Save an outfit (collage + items) for the current user"""
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
+            
+        try:
+            data = request.get_json()
+            outfit_name = data.get('name', '')
+            image_url = data.get('image_url', '')
+            prompt = data.get('prompt', '')
+            
+            if not outfit_name or not image_url:
+                return jsonify({'error': 'Outfit name and image URL are required'}), 400
+            
+            # Handle different types of image URLs
+            # If it's an external URL (from OpenAI), store the full URL
+            # If it's a local URL, extract just the filename
+            if image_url.startswith('http'):
+                # It's an external URL (from OpenAI), store it as-is
+                stored_url = image_url
+            else:
+                # It's a local URL like "/uploads/collage_20250626235735.png"
+                # Extract just the filename
+                stored_url = image_url.split('/')[-1]
+            
+            # Create new saved outfit
+            current_user_id = get_current_user_id()
+            new_outfit = SavedOutfit(
+                user_id=current_user_id,
+                name=outfit_name,
+                image_url=stored_url,
+                prompt=prompt
+            )
+            
+            db.session.add(new_outfit)
+            db.session.commit()
+            
+            return jsonify({
+                'message': 'Outfit saved successfully',
+                'outfit': new_outfit.to_dict()
+            }), 201
+            
+        except Exception as e:
+            print(f"Error saving outfit: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/saved-outfits', methods=['GET'])
+    def get_saved_outfits():
+        """Retrieve saved outfits for the current user"""
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
+            
+        try:
+            current_user_id = get_current_user_id()
+            outfits = SavedOutfit.query.filter_by(user_id=current_user_id).order_by(SavedOutfit.timestamp.desc()).all()
+            
+            outfits_list = [outfit.to_dict() for outfit in outfits]
+            
+            return jsonify({
+                'outfits': outfits_list,
+                'count': len(outfits_list)
+            }), 200
+            
+        except Exception as e:
+            print(f"Error retrieving saved outfits: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/delete-outfit/<int:outfit_id>', methods=['DELETE'])
+    def delete_outfit(outfit_id):
+        """Delete a saved outfit by ID"""
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
+            
+        try:
+            current_user_id = get_current_user_id()
+            outfit = SavedOutfit.query.filter_by(id=outfit_id, user_id=current_user_id).first()
+            
+            if not outfit:
+                return jsonify({'error': 'Outfit not found'}), 404
+            
+            # Delete the outfit
+            db.session.delete(outfit)
+            db.session.commit()
+            
+            return jsonify({'message': 'Outfit deleted successfully!'}), 200
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/wardrobe-items/<int:item_id>', methods=['DELETE'])
+    def delete_wardrobe_item(item_id):
+        """Delete a single wardrobe item by ID"""
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
+            
+        try:
+            current_user_id = get_current_user_id()
+            item = WardrobeItem.query.filter_by(id=item_id, user_id=current_user_id).first()
+            
+            if not item:
+                return jsonify({'error': 'Item not found'}), 404
+            
+            # Delete the image file if it exists
+            try:
+                if item.image_url:
+                    # Remove leading slash if present
+                    relative_path = item.image_url.lstrip('/')
+                    full_path = os.path.join(os.path.dirname(__file__), '..', relative_path)
+                    if os.path.exists(full_path):
+                        os.remove(full_path)
+            except Exception as e:
+                print(f"Error deleting image file: {e}")
+            
+            # Delete the item from database
+            db.session.delete(item)
+            db.session.commit()
+            
+            return jsonify({'message': 'Item deleted successfully!'}), 200
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/wardrobe-items', methods=['DELETE'])
+    def delete_multiple_wardrobe_items():
+        """Delete multiple wardrobe items by IDs"""
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
+            
+        try:
+            data = request.get_json()
+            if not data or 'item_ids' not in data:
+                return jsonify({'error': 'No item IDs provided'}), 400
+            
+            item_ids = data['item_ids']
+            if not isinstance(item_ids, list) or not item_ids:
+                return jsonify({'error': 'Invalid item IDs format'}), 400
+            
+            current_user_id = get_current_user_id()
+            items = WardrobeItem.query.filter(
+                WardrobeItem.id.in_(item_ids),
+                WardrobeItem.user_id == current_user_id
+            ).all()
+            
+            if not items:
+                return jsonify({'error': 'No items found'}), 404
+            
+            deleted_count = 0
+            for item in items:
+                try:
+                    # Delete the image file if it exists
+                    if item.image_url:
+                        relative_path = item.image_url.lstrip('/')
+                        full_path = os.path.join(os.path.dirname(__file__), '..', relative_path)
+                        if os.path.exists(full_path):
+                            os.remove(full_path)
+                except Exception as e:
+                    print(f"Error deleting image file: {e}")
+                
+                db.session.delete(item)
+                deleted_count += 1
+            
+            db.session.commit()
+            
+            return jsonify({'message': f'{deleted_count} items deleted successfully!'}), 200
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/saved-outfits/<int:outfit_id>', methods=['DELETE'])
+    def delete_saved_outfit(outfit_id):
+        """Delete a single saved outfit by ID (alternative endpoint)"""
+        return delete_outfit(outfit_id)
+
+    @app.route('/saved-outfits', methods=['DELETE'])
+    def delete_multiple_saved_outfits():
+        """Delete multiple saved outfits by IDs"""
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
+            
+        try:
+            data = request.get_json()
+            if not data or 'outfit_ids' not in data:
+                return jsonify({'error': 'No outfit IDs provided'}), 400
+            
+            outfit_ids = data['outfit_ids']
+            if not isinstance(outfit_ids, list) or not outfit_ids:
+                return jsonify({'error': 'Invalid outfit IDs format'}), 400
+            
+            current_user_id = get_current_user_id()
+            outfits = SavedOutfit.query.filter(
+                SavedOutfit.id.in_(outfit_ids),
+                SavedOutfit.user_id == current_user_id
+            ).all()
+            
+            if not outfits:
+                return jsonify({'error': 'No outfits found'}), 404
+            
+            deleted_count = 0
+            for outfit in outfits:
+                db.session.delete(outfit)
+                deleted_count += 1
+            
+            db.session.commit()
+            
+            return jsonify({'message': f'{deleted_count} outfits deleted successfully!'}), 200
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/saved-outfits/<int:outfit_id>', methods=['PUT'])
+    def rename_saved_outfit(outfit_id):
+        """Rename a saved outfit"""
+        # Check authentication
+        auth_error = require_login()
+        if auth_error:
+            return auth_error
+            
+        try:
+            data = request.get_json()
+            if not data or 'name' not in data:
+                return jsonify({'error': 'No name provided'}), 400
+            
+            new_name = data['name'].strip()
+            if not new_name:
+                return jsonify({'error': 'Name cannot be empty'}), 400
+            
+            current_user_id = get_current_user_id()
+            outfit = SavedOutfit.query.filter_by(id=outfit_id, user_id=current_user_id).first()
+            
+            if not outfit:
+                return jsonify({'error': 'Outfit not found'}), 404
+            
+            outfit.name = new_name
+            db.session.commit()
+            
+            return jsonify({
+                'message': 'Outfit renamed successfully!',
+                'outfit': outfit.to_dict()
+            }), 200
+            
+        except Exception as e:
             return jsonify({'error': str(e)}), 500

@@ -1,8 +1,10 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-// Configure base URL for your backend
-const BASE_URL = "USEYOURIPADDRESS"; // Update with your IP
+// Configure base URL for your backend using environment variables
+const API_HOST = process.env.EXPO_PUBLIC_API_HOST || '192.168.100.228';
+const API_PORT = process.env.EXPO_PUBLIC_API_PORT || '5000';
+const BASE_URL = `http://${API_HOST}:${API_PORT}`;
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -26,11 +28,18 @@ export const wardrobeAPI = {
   }),
   getWardrobeItems: () => api.get('/wardrobe-items'),
   cleanupUnknown: () => api.delete('/cleanup-unknown'),
+  deleteItem: (itemId) => api.delete(`/wardrobe-items/${itemId}`),
+  deleteItems: (itemIds) => api.delete('/wardrobe-items', { data: { item_ids: itemIds } }),
 };
 
 export const outfitAPI = {
   generateCompleteOutfit: (prompt) => api.post('/generate-complete-outfit', { prompt }),
   analyzePrompt: (prompt) => api.post('/analyze-prompt', { prompt }),
+  saveOutfit: (outfitData) => api.post('/save-outfit', outfitData),
+  getSavedOutfits: () => api.get('/saved-outfits'),
+  deleteOutfit: (outfitId) => api.delete(`/saved-outfits/${outfitId}`),
+  deleteOutfits: (outfitIds) => api.delete('/saved-outfits', { data: { outfit_ids: outfitIds } }),
+  renameOutfit: (outfitId, newName) => api.put(`/saved-outfits/${outfitId}`, { name: newName }),
 };
 
 export default api;

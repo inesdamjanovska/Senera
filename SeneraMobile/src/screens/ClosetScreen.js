@@ -22,6 +22,8 @@ const ClosetScreen = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedOutfit, setGeneratedOutfit] = useState(null);
   const [selectedItems, setSelectedItems] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [outfitName, setOutfitName] = useState('');
 
   const generateOutfit = async () => {
     if (!prompt.trim()) {
@@ -58,6 +60,39 @@ const ClosetScreen = () => {
     setGeneratedOutfit(null);
     setSelectedItems(null);
     setPrompt('');
+    setOutfitName('');
+  };
+  
+  const saveOutfit = async () => {
+    if (!generatedOutfit) {
+      Alert.alert('Error', 'No outfit to save');
+      return;
+    }
+    
+    if (!outfitName.trim()) {
+      Alert.alert('Name Required', 'Please give your outfit a name to save it');
+      return;
+    }
+    
+    try {
+      setIsSaving(true);
+      
+      const outfitData = {
+        name: outfitName.trim(),
+        image_url: generatedOutfit,
+        prompt: prompt
+      };
+      
+      const response = await outfitAPI.saveOutfit(outfitData);
+      Alert.alert('Success', 'Outfit saved successfully!');
+      setOutfitName('');
+    } catch (error) {
+      console.error('Save error:', error);
+      const errorMessage = error.response?.data?.error || 'Failed to save outfit';
+      Alert.alert('Save Failed', errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const promptSuggestions = [
@@ -88,7 +123,7 @@ const ClosetScreen = () => {
               {items.map((item, index) => (
                 <View key={index} style={styles.selectedItem}>
                   <Image
-                    source={{ uri: `http://localhost:5000${item.image_url}` }}
+                    source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.228'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${item.image_url}` }}
                     style={styles.selectedItemImage}
                     defaultSource={require('../../assets/icon.png')}
                   />
@@ -203,6 +238,30 @@ const ClosetScreen = () => {
           <View style={styles.promptDisplay}>
             <Text style={styles.promptLabel}>Your Request:</Text>
             <Text style={styles.promptText}>"{prompt}"</Text>
+          </View>
+          
+          {/* Subtle Save Button */}
+          <View style={styles.saveContainer}>
+            <TextInput
+              style={styles.saveNameInput}
+              placeholder="Name this outfit to save it"
+              value={outfitName}
+              onChangeText={setOutfitName}
+            />
+            <TouchableOpacity 
+              style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
+              onPress={saveOutfit}
+              disabled={isSaving || !outfitName.trim()}
+            >
+              <Ionicons 
+                name={isSaving ? "hourglass-outline" : "bookmark-outline"} 
+                size={20} 
+                color="white" 
+              />
+              <Text style={styles.saveButtonText}>
+                {isSaving ? 'Saving...' : 'Save Outfit'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -452,9 +511,41 @@ const styles = StyleSheet.create({
   tipText: {
     flex: 1,
     fontSize: 14,
-    color: '#666',
-    marginLeft: 12,
-    lineHeight: 20,
+    color: '#333',
+    marginLeft: 10,
+  },
+  saveContainer: {
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    marginTop: 10,
+  },
+  saveNameInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 10,
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#28a745',
+    padding: 12,
+    borderRadius: 8,
+    opacity: 0.9,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#cccccc',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: 'white',
+    marginLeft: 8,
   },
 });
 

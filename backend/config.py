@@ -12,3 +12,7 @@ class Config:
     SESSION_TYPE = 'filesystem'
     SESSION_PERMANENT = False
     SESSION_USE_SIGNER = True
+    
+    # Network Configuration
+    API_HOST = os.getenv('API_HOST', '192.168.100.228')
+    API_PORT = int(os.getenv('API_PORT', '5000'))

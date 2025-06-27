@@ -1,6 +1,6 @@
 from app import app
 from db import db
-from db.models import User, WardrobeItem, Tag, WardrobeItemTag
+from db.models import User, WardrobeItem, Tag, WardrobeItemTag, SavedOutfit
 
 def init_database():
     """Initialize the database with tables"""
@@ -15,6 +15,7 @@ def init_database():
         print("- wardrobe_items") 
         print("- tags")
         print("- wardrobe_item_tags")
+        print("- saved_outfits")
 
 if __name__ == '__main__':
     init_database()
