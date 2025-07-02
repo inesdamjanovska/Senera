@@ -13,9 +13,11 @@ import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import WardrobeScreen from './src/screens/WardrobeScreen';
 import ClosetScreen from './src/screens/ClosetScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 // Import context
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import LoadingScreen from './src/screens/LoadingScreen';
 
 const Stack = createStackNavigator();
@@ -23,6 +25,8 @@ const Tab = createBottomTabNavigator();
 
 // Bottom Tab Navigator for authenticated users
 function MainTabNavigator() {
+  const { theme } = useTheme();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -39,11 +43,11 @@ function MainTabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#007bff',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: theme.tabBarActive,
+        tabBarInactiveTintColor: theme.tabBarInactive,
         tabBarStyle: {
-          backgroundColor: 'white',
-          borderTopColor: '#e0e0e0',
+          backgroundColor: theme.tabBarBackground,
+          borderTopColor: theme.border,
           borderTopWidth: 1,
           paddingTop: 8,
           paddingBottom: Platform.OS === 'ios' ? 25 : 12, // More padding on iOS for home indicator
@@ -53,7 +57,7 @@ function MainTabNavigator() {
           left: 0,
           right: 0,
           elevation: 10, // Android shadow
-          shadowColor: '#000', // iOS shadow
+          shadowColor: theme.shadow, // iOS shadow
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 3,
@@ -67,7 +71,7 @@ function MainTabNavigator() {
           paddingVertical: 5,
         },
         headerStyle: {
-          backgroundColor: '#007bff',
+          backgroundColor: theme.primary,
         },
         headerTintColor: 'white',
         headerTitleStyle: {
@@ -96,11 +100,13 @@ function MainTabNavigator() {
 
 // Auth Stack Navigator for login/register
 function AuthStackNavigator() {
+  const { theme } = useTheme();
+  
   return (
     <Stack.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#007bff',
+          backgroundColor: theme.primary,
         },
         headerTintColor: 'white',
         headerTitleStyle: {
@@ -122,9 +128,33 @@ function AuthStackNavigator() {
   );
 }
 
+// Main Stack Navigator for authenticated users (includes Settings)
+function MainStackNavigator() {
+  const { theme } = useTheme();
+  
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+      <Stack.Screen 
+        name="Settings" 
+        component={SettingsScreen}
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 // Main App Navigator
 function AppNavigator() {
   const { user, isLoading } = useAuth();
+  const { theme } = useTheme();
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -132,7 +162,8 @@ function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {user ? <MainTabNavigator /> : <AuthStackNavigator />}
+      <StatusBar style={theme.statusBarStyle} />
+      {user ? <MainStackNavigator /> : <AuthStackNavigator />}
     </NavigationContainer>
   );
 }
@@ -141,10 +172,11 @@ function AppNavigator() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <StatusBar style="light" backgroundColor="#007bff" />
-        <AppNavigator />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppNavigator />
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

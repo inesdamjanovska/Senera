@@ -14,10 +14,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { outfitAPI } from '../services/api';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const ClosetScreen = () => {
+  const { theme } = useTheme();
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedOutfit, setGeneratedOutfit] = useState(null);
@@ -114,22 +116,22 @@ const ClosetScreen = () => {
     if (!selectedItems) return null;
 
     return (
-      <View style={styles.selectedItemsContainer}>
-        <Text style={styles.sectionTitle}>Selected Items:</Text>
+      <View style={[styles.selectedItemsContainer, { backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Selected Items:</Text>
         {Object.entries(selectedItems).map(([category, items]) => (
           <View key={category} style={styles.categoryContainer}>
-            <Text style={styles.categoryTitle}>{category.toUpperCase()}</Text>
+            <Text style={[styles.categoryTitle, { color: theme.textSecondary }]}>{category.toUpperCase()}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {items.map((item, index) => (
                 <View key={index} style={styles.selectedItem}>
                   <Image
-                    source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.228'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${item.image_url}` }}
+                    source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.253'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${item.image_url}` }}
                     style={styles.selectedItemImage}
                     defaultSource={require('../../assets/icon.png')}
                   />
                   <View style={styles.selectedItemTags}>
                     {item.tags.slice(0, 2).map((tag, tagIndex) => (
-                      <Text key={tagIndex} style={styles.selectedItemTag}>
+                      <Text key={tagIndex} style={[styles.selectedItemTag, { color: theme.textSecondary }]}>
                         {tag}
                       </Text>
                     ))}
@@ -144,10 +146,10 @@ const ClosetScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
       <LinearGradient
-        colors={['#9c27b0', '#7b1fa2']}
+        colors={[theme.gradientStart, theme.gradientEnd]}
         style={styles.header}
       >
         <View style={styles.headerContent}>
@@ -161,11 +163,15 @@ const ClosetScreen = () => {
 
       {/* Prompt Input */}
       <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Describe your outfit:</Text>
+        <Text style={[styles.inputLabel, { color: theme.text }]}>Describe your outfit:</Text>
         <TextInput
-          style={styles.textInput}
+          style={[styles.textInput, { 
+            backgroundColor: theme.surface, 
+            borderColor: theme.border,
+            color: theme.text 
+          }]}
           placeholder="e.g., Casual outfit for warm weather"
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.textSecondary}
           value={prompt}
           onChangeText={setPrompt}
           multiline
@@ -173,7 +179,7 @@ const ClosetScreen = () => {
         />
         
         <TouchableOpacity
-          style={[styles.generateButton, isGenerating && styles.generateButtonDisabled]}
+          style={[styles.generateButton, { backgroundColor: theme.primary }, isGenerating && styles.generateButtonDisabled]}
           onPress={generateOutfit}
           disabled={isGenerating}
         >
@@ -190,15 +196,18 @@ const ClosetScreen = () => {
 
       {/* Prompt Suggestions */}
       <View style={styles.suggestionsContainer}>
-        <Text style={styles.suggestionsTitle}>Quick Ideas:</Text>
+        <Text style={[styles.suggestionsTitle, { color: theme.text }]}>Quick Ideas:</Text>
         <View style={styles.suggestionsGrid}>
           {promptSuggestions.map((suggestion, index) => (
             <TouchableOpacity
               key={index}
-              style={styles.suggestionChip}
+              style={[styles.suggestionChip, { 
+                backgroundColor: theme.surface, 
+                borderColor: theme.border 
+              }]}
               onPress={() => selectSuggestion(suggestion)}
             >
-              <Text style={styles.suggestionText}>{suggestion}</Text>
+              <Text style={[styles.suggestionText, { color: theme.textSecondary }]}>{suggestion}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -207,8 +216,8 @@ const ClosetScreen = () => {
       {/* Loading State */}
       {isGenerating && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#9c27b0" />
-          <Text style={styles.loadingText}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
             Analyzing your wardrobe and generating outfit...
           </Text>
         </View>
@@ -219,11 +228,11 @@ const ClosetScreen = () => {
 
       {/* Generated Outfit */}
       {generatedOutfit && (
-        <View style={styles.resultContainer}>
+        <View style={[styles.resultContainer, { backgroundColor: theme.card }]}>
           <View style={styles.resultHeader}>
-            <Text style={styles.sectionTitle}>Your AI-Generated Outfit:</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Your AI-Generated Outfit:</Text>
             <TouchableOpacity style={styles.clearButton} onPress={clearResults}>
-              <Ionicons name="close" size={20} color="#666" />
+              <Ionicons name="close" size={20} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
           
@@ -235,21 +244,26 @@ const ClosetScreen = () => {
             />
           </View>
           
-          <View style={styles.promptDisplay}>
-            <Text style={styles.promptLabel}>Your Request:</Text>
-            <Text style={styles.promptText}>"{prompt}"</Text>
+          <View style={[styles.promptDisplay, { borderTopColor: theme.border }]}>
+            <Text style={[styles.promptLabel, { color: theme.textSecondary }]}>Your Request:</Text>
+            <Text style={[styles.promptText, { color: theme.text }]}>"{prompt}"</Text>
           </View>
           
           {/* Subtle Save Button */}
           <View style={styles.saveContainer}>
             <TextInput
-              style={styles.saveNameInput}
+              style={[styles.saveNameInput, { 
+                borderColor: theme.border, 
+                color: theme.text,
+                backgroundColor: theme.surface 
+              }]}
               placeholder="Name this outfit to save it"
+              placeholderTextColor={theme.textSecondary}
               value={outfitName}
               onChangeText={setOutfitName}
             />
             <TouchableOpacity 
-              style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
+              style={[styles.saveButton, { backgroundColor: theme.success }, isSaving && styles.saveButtonDisabled]} 
               onPress={saveOutfit}
               disabled={isSaving || !outfitName.trim()}
             >
@@ -267,26 +281,26 @@ const ClosetScreen = () => {
       )}
 
       {/* Tips */}
-      <View style={styles.tipsContainer}>
-        <Text style={styles.sectionTitle}>Tips for Better Results:</Text>
+      <View style={[styles.tipsContainer, { backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Tips for Better Results:</Text>
         
         <View style={styles.tipItem}>
-          <Ionicons name="bulb-outline" size={20} color="#ff9800" />
-          <Text style={styles.tipText}>
+          <Ionicons name="bulb-outline" size={20} color={theme.warning} />
+          <Text style={[styles.tipText, { color: theme.text }]}>
             Be specific about the occasion (e.g., "work meeting", "date night")
           </Text>
         </View>
         
         <View style={styles.tipItem}>
-          <Ionicons name="sunny-outline" size={20} color="#ffc107" />
-          <Text style={styles.tipText}>
+          <Ionicons name="sunny-outline" size={20} color={theme.warning} />
+          <Text style={[styles.tipText, { color: theme.text }]}>
             Mention weather or season for better recommendations
           </Text>
         </View>
         
         <View style={styles.tipItem}>
-          <Ionicons name="color-palette-outline" size={20} color="#4caf50" />
-          <Text style={styles.tipText}>
+          <Ionicons name="color-palette-outline" size={20} color={theme.success} />
+          <Text style={[styles.tipText, { color: theme.text }]}>
             Include preferred colors or styles you want to incorporate
           </Text>
         </View>
@@ -298,7 +312,6 @@ const ClosetScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   header: {
     padding: 20,
@@ -325,16 +338,13 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 10,
   },
   textInput: {
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 15,
     fontSize: 16,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
     textAlignVertical: 'top',
     marginBottom: 15,
     shadowColor: '#000',
@@ -347,7 +357,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#9c27b0',
     padding: 15,
     borderRadius: 12,
     shadowColor: '#000',
@@ -372,7 +381,6 @@ const styles = StyleSheet.create({
   suggestionsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 10,
   },
   suggestionsGrid: {
@@ -380,18 +388,15 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   suggestionChip: {
-    backgroundColor: 'white',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     marginRight: 8,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   suggestionText: {
     fontSize: 14,
-    color: '#666',
   },
   loadingContainer: {
     alignItems: 'center',
@@ -399,13 +404,11 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
     marginTop: 15,
     textAlign: 'center',
   },
   selectedItemsContainer: {
     padding: 20,
-    backgroundColor: 'white',
     marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 12,
@@ -421,7 +424,6 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
     marginBottom: 8,
   },
   selectedItem: {
@@ -439,12 +441,10 @@ const styles = StyleSheet.create({
   },
   selectedItemTag: {
     fontSize: 10,
-    color: '#666',
     textAlign: 'center',
   },
   resultContainer: {
     margin: 20,
-    backgroundColor: 'white',
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -465,7 +465,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
   },
   outfitImageContainer: {
     alignItems: 'center',
@@ -479,23 +478,19 @@ const styles = StyleSheet.create({
   promptDisplay: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
   },
   promptLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
     marginBottom: 5,
   },
   promptText: {
     fontSize: 16,
-    color: '#333',
     fontStyle: 'italic',
   },
   tipsContainer: {
     padding: 20,
     margin: 20,
-    backgroundColor: 'white',
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -511,7 +506,6 @@ const styles = StyleSheet.create({
   tipText: {
     flex: 1,
     fontSize: 14,
-    color: '#333',
     marginLeft: 10,
   },
   saveContainer: {
@@ -522,7 +516,6 @@ const styles = StyleSheet.create({
   },
   saveNameInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 12,
@@ -533,7 +526,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#28a745',
     padding: 12,
     borderRadius: 8,
     opacity: 0.9,

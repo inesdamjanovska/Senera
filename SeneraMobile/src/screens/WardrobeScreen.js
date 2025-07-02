@@ -17,14 +17,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { wardrobeAPI, outfitAPI } from '../services/api';
+import { useTheme } from '../context/ThemeContext';
+import { StatusBar } from 'expo-status-bar';
 
 const { width } = Dimensions.get('window');
 
 const WardrobeScreen = () => {
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState('clothes'); // 'clothes' or 'outfits'
   const [wardrobeItems, setWardrobeItems] = useState([]);
   const [savedOutfits, setSavedOutfits] = useState([]);
+  const [favoriteOutfits, setFavoriteOutfits] = useState([]); // Store favorite outfit IDs
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,6 +74,37 @@ const WardrobeScreen = () => {
     setSelectedItems([]);
     setSelectedOutfits([]);
   }, [activeTab]);
+
+  useEffect(() => {
+    loadFavoriteOutfits();
+  }, []);
+
+  const loadFavoriteOutfits = async () => {
+    try {
+      const favorites = await AsyncStorage.getItem('favoriteOutfits');
+      if (favorites) {
+        setFavoriteOutfits(JSON.parse(favorites));
+      }
+    } catch (error) {
+      console.error('Error loading favorite outfits:', error);
+    }
+  };
+
+  const toggleFavoriteOutfit = async (outfitId) => {
+    try {
+      let newFavorites;
+      if (favoriteOutfits.includes(outfitId)) {
+        newFavorites = favoriteOutfits.filter(id => id !== outfitId);
+      } else {
+        newFavorites = [...favoriteOutfits, outfitId];
+      }
+      
+      setFavoriteOutfits(newFavorites);
+      await AsyncStorage.setItem('favoriteOutfits', JSON.stringify(newFavorites));
+    } catch (error) {
+      console.error('Error toggling favorite outfit:', error);
+    }
+  };
 
   const loadWardrobeItems = async () => {
     try {
@@ -441,13 +477,15 @@ const WardrobeScreen = () => {
           key={category}
           style={[
             styles.categoryButton,
-            selectedCategory === category && styles.categoryButtonActive
+            { backgroundColor: theme.surface, borderColor: theme.border },
+            selectedCategory === category && [styles.categoryButtonActive, { backgroundColor: theme.primary }]
           ]}
           onPress={() => setSelectedCategory(category)}
         >
           <Text style={[
             styles.categoryButtonText,
-            selectedCategory === category && styles.categoryButtonTextActive
+            { color: theme.textSecondary },
+            selectedCategory === category && [styles.categoryButtonTextActive, { color: 'white' }]
           ]}>
             {category}
           </Text>
@@ -472,7 +510,7 @@ const WardrobeScreen = () => {
         activeOpacity={0.8}
       >
         <Image
-          source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.228'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${item.image_url}` }}
+          source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.253'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${item.image_url}` }}
           style={styles.itemImageSimple}
           defaultSource={require('../../assets/icon.png')}
         />
@@ -490,13 +528,14 @@ const WardrobeScreen = () => {
   // Render outfit item (simplified - image only)
   const renderOutfitItem = (outfit) => {
     const isSelected = selectedOutfits.includes(outfit.id);
+    const isFavorite = favoriteOutfits.includes(outfit.id);
     
     // Determine the correct image URI
     let imageUri;
     if (outfit.image_url.startsWith('http')) {
       imageUri = outfit.image_url;
     } else {
-      imageUri = `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.228'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${outfit.image_url}`;
+      imageUri = `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.253'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${outfit.image_url}`;
     }
     
     return (
@@ -504,7 +543,8 @@ const WardrobeScreen = () => {
         key={outfit.id}
         style={[
           styles.outfitItemSimple,
-          isSelected && styles.outfitItemSelected
+          { backgroundColor: theme.card },
+          isSelected && [styles.outfitItemSelected, { borderColor: theme.primary }]
         ]}
         onPress={() => handleOutfitPress(outfit)}
         onLongPress={() => handleOutfitLongPress(outfit.id)}
@@ -513,6 +553,7 @@ const WardrobeScreen = () => {
         <Image
           source={{ uri: imageUri }}
           style={styles.outfitImageSimple}
+          resizeMode="contain"
           defaultSource={require('../../assets/icon.png')}
         />
         <View style={styles.outfitOverlay}>
@@ -520,9 +561,25 @@ const WardrobeScreen = () => {
             {outfit.name}
           </Text>
         </View>
+        
+        {/* Favorite Button */}
+        {!selectionMode && (
+          <TouchableOpacity
+            style={styles.favoriteButton}
+            onPress={() => toggleFavoriteOutfit(outfit.id)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons 
+              name={isFavorite ? "heart" : "heart-outline"} 
+              size={20} 
+              color={isFavorite ? "#ff4757" : "white"} 
+            />
+          </TouchableOpacity>
+        )}
+        
         {selectionMode && (
           <View style={styles.selectionOverlay}>
-            <View style={[styles.selectionCircle, isSelected && styles.selectionCircleSelected]}>
+            <View style={[styles.selectionCircle, isSelected && [styles.selectionCircleSelected, { backgroundColor: theme.primary, borderColor: theme.primary }]]}>
               {isSelected && <Ionicons name="checkmark" size={16} color="white" />}
             </View>
           </View>
@@ -541,28 +598,28 @@ const WardrobeScreen = () => {
     >
       <View style={styles.modalOverlay}>
         <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
             {/* Header */}
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setItemModalVisible(false)}
               >
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={theme.textSecondary} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalDeleteButton}
                 onPress={() => selectedItem && deleteSingleItem(selectedItem.id)}
               >
-                <Ionicons name="trash-outline" size={20} color="#dc3545" />
+                <Ionicons name="trash-outline" size={20} color={theme.error} />
               </TouchableOpacity>
             </View>
 
             {/* Image */}
             {selectedItem && (
-              <View style={styles.modalImageContainer}>
+              <View style={[styles.modalImageContainer, { backgroundColor: theme.surface }]}>
                 <Image
-                  source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.228'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${selectedItem.image_url}` }}
+                  source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.253'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${selectedItem.image_url}` }}
                   style={styles.modalImage}
                   resizeMode="contain"
                 />
@@ -571,19 +628,19 @@ const WardrobeScreen = () => {
 
             {/* Details */}
             {selectedItem && (
-              <View style={styles.modalDetails}>
-                <Text style={styles.modalTitle}>{selectedItem.type_category}</Text>
-                <Text style={styles.modalDate}>
+              <View style={[styles.modalDetails, { borderTopColor: theme.border }]}>
+                <Text style={[styles.modalTitle, { color: theme.text }]}>{selectedItem.type_category}</Text>
+                <Text style={[styles.modalDate, { color: theme.textSecondary }]}>
                   Added on {new Date(selectedItem.timestamp).toLocaleDateString()}
                 </Text>
                 
                 {/* Tags */}
                 <View style={styles.modalTagsContainer}>
-                  <Text style={styles.modalTagsTitle}>Tags:</Text>
+                  <Text style={[styles.modalTagsTitle, { color: theme.text }]}>Tags:</Text>
                   <View style={styles.modalTagsWrapper}>
                     {selectedItem.tags?.map((tag, index) => (
-                      <View key={index} style={styles.modalTag}>
-                        <Text style={styles.modalTagText}>{tag}</Text>
+                      <View key={index} style={[styles.modalTag, { backgroundColor: theme.surface }]}>
+                        <Text style={[styles.modalTagText, { color: theme.textSecondary }]}>{tag}</Text>
                       </View>
                     ))}
                   </View>
@@ -606,31 +663,47 @@ const WardrobeScreen = () => {
     >
       <View style={styles.modalOverlay}>
         <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
             {/* Header */}
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setOutfitModalVisible(false)}
               >
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={theme.textSecondary} />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalDeleteButton}
-                onPress={() => selectedOutfit && deleteSingleOutfit(selectedOutfit.id)}
-              >
-                <Ionicons name="trash-outline" size={20} color="#dc3545" />
-              </TouchableOpacity>
+              
+              <View style={styles.modalHeaderButtons}>
+                {/* Favorite Button */}
+                <TouchableOpacity
+                  style={styles.modalFavoriteButton}
+                  onPress={() => selectedOutfit && toggleFavoriteOutfit(selectedOutfit.id)}
+                >
+                  <Ionicons 
+                    name={selectedOutfit && favoriteOutfits.includes(selectedOutfit.id) ? "heart" : "heart-outline"} 
+                    size={22} 
+                    color={selectedOutfit && favoriteOutfits.includes(selectedOutfit.id) ? "#ff4757" : theme.textSecondary} 
+                  />
+                </TouchableOpacity>
+                
+                {/* Delete Button */}
+                <TouchableOpacity
+                  style={styles.modalDeleteButton}
+                  onPress={() => selectedOutfit && deleteSingleOutfit(selectedOutfit.id)}
+                >
+                  <Ionicons name="trash-outline" size={20} color={theme.error} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Image */}
             {selectedOutfit && (
-              <View style={styles.modalImageContainer}>
+              <View style={[styles.modalImageContainer, { backgroundColor: theme.surface }]}>
                 <Image
                   source={{ 
                     uri: selectedOutfit.image_url.startsWith('http') 
                       ? selectedOutfit.image_url 
-                      : `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.228'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${selectedOutfit.image_url}`
+                      : `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.253'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${selectedOutfit.image_url}`
                   }}
                   style={styles.modalImage}
                   resizeMode="contain"
@@ -640,14 +713,18 @@ const WardrobeScreen = () => {
 
             {/* Details */}
             {selectedOutfit && (
-              <View style={styles.modalDetails}>
+              <View style={[styles.modalDetails, { borderTopColor: theme.border }]}>
                 {/* Editable name */}
                 <View style={styles.modalNameContainer}>
                   <TextInput
-                    style={styles.modalNameInput}
+                    style={[styles.modalNameInput, { 
+                      color: theme.text, 
+                      borderBottomColor: theme.border 
+                    }]}
                     value={outfitNewName}
                     onChangeText={setOutfitNewName}
                     placeholder="Outfit name"
+                    placeholderTextColor={theme.textSecondary}
                     onSubmitEditing={renameOutfit}
                   />
                   <TouchableOpacity
@@ -658,12 +735,12 @@ const WardrobeScreen = () => {
                     <Ionicons 
                       name={isRenaming ? "hourglass-outline" : "checkmark"} 
                       size={20} 
-                      color="#007bff" 
+                      color={theme.primary} 
                     />
                   </TouchableOpacity>
                 </View>
                 
-                <Text style={styles.modalDate}>
+                <Text style={[styles.modalDate, { color: theme.textSecondary }]}>
                   Created on {new Date(selectedOutfit.timestamp).toLocaleDateString()}
                 </Text>
               </View>
@@ -676,9 +753,9 @@ const WardrobeScreen = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
-        <Text style={styles.loadingText}>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
           {activeTab === 'clothes' ? 'Loading your wardrobe...' : 'Loading your outfits...'}
         </Text>
       </View>
@@ -689,14 +766,16 @@ const WardrobeScreen = () => {
   const hasSelectedItems = activeTab === 'clothes' ? selectedItems.length > 0 : selectedOutfits.length > 0;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar style={theme.statusBarStyle} />
+      
       {/* Selection Mode Header */}
       {selectionMode && (
-        <View style={styles.selectionHeader}>
+        <View style={[styles.selectionHeader, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
           <TouchableOpacity onPress={exitSelectionMode}>
-            <Ionicons name="close" size={24} color="#007bff" />
+            <Ionicons name="close" size={24} color={theme.primary} />
           </TouchableOpacity>
-          <Text style={styles.selectionText}>
+          <Text style={[styles.selectionText, { color: theme.text }]}>
             {activeTab === 'clothes' ? selectedItems.length : selectedOutfits.length} selected
           </Text>
           <TouchableOpacity 
@@ -704,37 +783,37 @@ const WardrobeScreen = () => {
             disabled={!hasSelectedItems}
             style={[styles.deleteButton, !hasSelectedItems && styles.deleteButtonDisabled]}
           >
-            <Ionicons name="trash-outline" size={24} color={hasSelectedItems ? "#dc3545" : "#ccc"} />
+            <Ionicons name="trash-outline" size={24} color={hasSelectedItems ? theme.error : theme.textLight} />
           </TouchableOpacity>
         </View>
       )}
 
       {/* Tabs */}
       {!selectionMode && (
-        <View style={styles.tabContainer}>
+        <View style={[styles.tabContainer, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'clothes' && styles.activeTab]}
+            style={[styles.tab, activeTab === 'clothes' && [styles.activeTab, { backgroundColor: theme.primary }]]}
             onPress={() => setActiveTab('clothes')}
           >
             <Ionicons 
               name="shirt-outline" 
               size={20} 
-              color={activeTab === 'clothes' ? '#007bff' : '#666'} 
+              color={activeTab === 'clothes' ? 'white' : theme.textSecondary} 
             />
-            <Text style={[styles.tabText, activeTab === 'clothes' && styles.activeTabText]}>
+            <Text style={[styles.tabText, { color: theme.textSecondary }, activeTab === 'clothes' && [styles.activeTabText, { color: 'white' }]]}>
               Clothes
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'outfits' && styles.activeTab]}
+            style={[styles.tab, activeTab === 'outfits' && [styles.activeTab, { backgroundColor: theme.primary }]]}
             onPress={() => setActiveTab('outfits')}
           >
             <Ionicons 
               name="people-outline" 
               size={20} 
-              color={activeTab === 'outfits' ? '#007bff' : '#666'} 
+              color={activeTab === 'outfits' ? 'white' : theme.textSecondary} 
             />
-            <Text style={[styles.tabText, activeTab === 'outfits' && styles.activeTabText]}>
+            <Text style={[styles.tabText, { color: theme.textSecondary }, activeTab === 'outfits' && [styles.activeTabText, { color: 'white' }]]}>
               Outfits
             </Text>
           </TouchableOpacity>
@@ -757,11 +836,11 @@ const WardrobeScreen = () => {
           >
             {filteredItems.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="shirt-outline" size={80} color="#ccc" />
-                <Text style={styles.emptyTitle}>
+                <Ionicons name="shirt-outline" size={80} color={theme.textLight} />
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>
                   {selectedCategory === 'All' ? 'Your wardrobe is empty' : `No ${selectedCategory.toLowerCase()} found`}
                 </Text>
-                <Text style={styles.emptySubtitle}>
+                <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
                   {selectedCategory === 'All' 
                     ? 'Tap "Add New Items" to start building your digital wardrobe!' 
                     : `Try selecting a different category or add some ${selectedCategory.toLowerCase()}`
@@ -777,9 +856,9 @@ const WardrobeScreen = () => {
 
           {/* Upload Button - Moved to Bottom */}
           {!selectionMode && (
-            <View style={styles.bottomButtonContainer}>
+            <View style={[styles.bottomButtonContainer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
               <TouchableOpacity
-                style={[styles.uploadButton, isUploading && styles.uploadButtonDisabled]}
+                style={[styles.uploadButton, { backgroundColor: theme.primary }, isUploading && styles.uploadButtonDisabled]}
                 onPress={pickImage}
                 disabled={isUploading}
               >
@@ -805,15 +884,38 @@ const WardrobeScreen = () => {
         >
           {savedOutfits.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={80} color="#ccc" />
-              <Text style={styles.emptyTitle}>No saved outfits</Text>
-              <Text style={styles.emptySubtitle}>
+              <Ionicons name="people-outline" size={80} color={theme.textLight} />
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>No saved outfits</Text>
+              <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
                 Generate an outfit and save it to see it here!
               </Text>
             </View>
           ) : (
             <View style={styles.outfitsGridSimple}>
-              {savedOutfits.map(renderOutfitItem)}
+              {/* Favorites section */}
+              {savedOutfits.filter(outfit => favoriteOutfits.includes(outfit.id)).length > 0 && (
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="heart" size={18} color="#ff4757" />
+                  <Text style={[styles.sectionHeaderText, { color: theme.text }]}>Favorites</Text>
+                </View>
+              )}
+              {/* Render favorites first */}
+              {savedOutfits
+                .filter(outfit => favoriteOutfits.includes(outfit.id))
+                .map(renderOutfitItem)}
+              
+              {/* Other outfits section */}
+              {savedOutfits.filter(outfit => !favoriteOutfits.includes(outfit.id)).length > 0 && 
+               savedOutfits.filter(outfit => favoriteOutfits.includes(outfit.id)).length > 0 && (
+                <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+                  <Ionicons name="albums-outline" size={18} color={theme.textSecondary} />
+                  <Text style={[styles.sectionHeaderText, { color: theme.text }]}>Other Outfits</Text>
+                </View>
+              )}
+              {/* Then render non-favorites */}
+              {savedOutfits
+                .filter(outfit => !favoriteOutfits.includes(outfit.id))
+                .map(renderOutfitItem)}
             </View>
           )}
         </ScrollView>
@@ -829,7 +931,6 @@ const WardrobeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   loadingContainer: {
     flex: 1,
@@ -839,7 +940,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
   },
   
   // Selection Mode
@@ -849,14 +949,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: '#f0f8ff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
   },
   selectionText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007bff',
   },
   deleteButton: {
     padding: 5,
@@ -870,9 +967,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginVertical: 10,
     marginHorizontal: 15,
-    backgroundColor: '#e9ecef',
     borderRadius: 10,
     overflow: 'hidden',
+    borderBottomWidth: 1,
   },
   tab: {
     flex: 1,
@@ -882,7 +979,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   activeTab: {
-    backgroundColor: '#fff',
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -893,11 +989,9 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#666',
     marginLeft: 5,
   },
   activeTabText: {
-    color: '#007bff',
     fontWeight: '600',
   },
 
@@ -915,21 +1009,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     marginRight: 8,
-    backgroundColor: '#e9ecef',
     borderRadius: 16,
     minHeight: 32,
     justifyContent: 'center',
+    borderWidth: 1,
   },
   categoryButtonActive: {
-    backgroundColor: '#007bff',
+    // No longer needed - handled dynamically
   },
   categoryButtonText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#666',
   },
   categoryButtonTextActive: {
-    color: 'white',
+    // No longer needed - handled dynamically
   },
 
   // Buttons
@@ -937,7 +1030,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007bff',
     padding: 18,
     borderRadius: 12,
     shadowColor: '#000',
@@ -972,9 +1064,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 15,
-    backgroundColor: '#f8f9fa',
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
   },
   emptyContainer: {
     flex: 1,
@@ -985,13 +1075,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     marginTop: 20,
     marginBottom: 10,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
     paddingHorizontal: 40,
   },
@@ -1036,8 +1124,19 @@ const styles = StyleSheet.create({
   outfitsGridSimple: {
     padding: 15,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingHorizontal: 5,
+  },
+  sectionHeaderText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
   outfitItemSimple: {
-    height: 200,
+    height: 320, // Further increased height for full outfit display
     marginBottom: 15,
     borderRadius: 12,
     overflow: 'hidden',
@@ -1047,6 +1146,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+    position: 'relative',
   },
   outfitItemSelected: {
     borderWidth: 3,
@@ -1054,22 +1154,36 @@ const styles = StyleSheet.create({
   },
   outfitImageSimple: {
     width: '100%',
-    height: '100%',
+    height: '85%', // Leave space for overlay at bottom
     backgroundColor: '#f0f0f0',
+    padding: 5, // Add small padding around the image
   },
   outfitOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.8)',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
+    height: '15%', // Fixed height for overlay
+    justifyContent: 'center',
   },
   outfitNameOverlay: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Selection overlay
@@ -1106,7 +1220,6 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     flex: 1,
-    backgroundColor: 'white',
     marginTop: 50,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -1118,10 +1231,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+  },
+  modalHeaderButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   modalCloseButton: {
     padding: 5,
+  },
+  modalFavoriteButton: {
+    padding: 5,
+    marginRight: 10,
   },
   modalDeleteButton: {
     padding: 5,
@@ -1130,7 +1250,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
   modalImage: {
     width: '90%',
@@ -1140,18 +1259,15 @@ const styles = StyleSheet.create({
   modalDetails: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 5,
     textTransform: 'capitalize',
   },
   modalDate: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 15,
   },
   modalTagsContainer: {
@@ -1160,7 +1276,6 @@ const styles = StyleSheet.create({
   modalTagsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 10,
   },
   modalTagsWrapper: {
@@ -1168,7 +1283,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   modalTag: {
-    backgroundColor: '#e9ecef',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -1177,7 +1291,6 @@ const styles = StyleSheet.create({
   },
   modalTagText: {
     fontSize: 14,
-    color: '#666',
   },
 
   // Outfit Modal Specific
@@ -1190,9 +1303,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
     paddingBottom: 5,
     marginRight: 10,
   },

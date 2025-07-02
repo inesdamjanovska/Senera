@@ -14,5 +14,5 @@ class Config:
     SESSION_USE_SIGNER = True
     
     # Network Configuration
-    API_HOST = os.getenv('API_HOST', '192.168.100.228')
+    API_HOST = os.getenv('API_HOST', '192.168.100.253')
     API_PORT = int(os.getenv('API_PORT', '5000'))

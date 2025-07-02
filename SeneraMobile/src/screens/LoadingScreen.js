@@ -1,13 +1,18 @@
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../context/ThemeContext';
+import { StatusBar } from 'expo-status-bar';
 
 const LoadingScreen = () => {
+  const { theme } = useTheme();
+  
   return (
     <LinearGradient
-      colors={['#007bff', '#0056b3']}
+      colors={[theme.gradientStart, theme.gradientEnd]}
       style={styles.container}
     >
+      <StatusBar style={theme.statusBarStyle} />
       <View style={styles.content}>
         <Text style={styles.logo}>👗</Text>
         <Text style={styles.title}>Senera</Text>

@@ -12,8 +12,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const RegisterScreen = ({ navigation }) => {
+  const { theme } = useTheme();
   const [formData, setFormData] = useState({
     displayName: '',
     email: '',
@@ -74,7 +76,7 @@ const RegisterScreen = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <LinearGradient
-        colors={['#007bff', '#0056b3']}
+        colors={[theme.gradientStart, theme.gradientEnd]}
         style={styles.gradient}
       >
         <ScrollView
@@ -87,13 +89,17 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.subtitle}>Create Your Account</Text>
           </View>
 
-          <View style={styles.formContainer}>
+          <View style={[styles.formContainer, { backgroundColor: theme.card }]}>
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Display Name</Text>
+              <Text style={[styles.label, { color: theme.text }]}>Display Name</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { 
+                  backgroundColor: theme.surface, 
+                  borderColor: theme.border,
+                  color: theme.text 
+                }]}
                 placeholder="How should we call you?"
-                placeholderTextColor="#999"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.displayName}
                 onChangeText={(value) => updateFormData('displayName', value)}
                 autoCapitalize="words"
@@ -101,11 +107,15 @@ const RegisterScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email Address</Text>
+              <Text style={[styles.label, { color: theme.text }]}>Email Address</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { 
+                  backgroundColor: theme.surface, 
+                  borderColor: theme.border,
+                  color: theme.text 
+                }]}
                 placeholder="your@email.com"
-                placeholderTextColor="#999"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.email}
                 onChangeText={(value) => updateFormData('email', value)}
                 keyboardType="email-address"
@@ -115,11 +125,15 @@ const RegisterScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={[styles.label, { color: theme.text }]}>Password</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { 
+                  backgroundColor: theme.surface, 
+                  borderColor: theme.border,
+                  color: theme.text 
+                }]}
                 placeholder="At least 6 characters"
-                placeholderTextColor="#999"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.password}
                 onChangeText={(value) => updateFormData('password', value)}
                 secureTextEntry
@@ -128,14 +142,19 @@ const RegisterScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Confirm Password</Text>
+              <Text style={[styles.label, { color: theme.text }]}>Confirm Password</Text>
               <TextInput
                 style={[
                   styles.input,
-                  formData.confirmPassword && formData.password !== formData.confirmPassword && styles.inputError
+                  { 
+                    backgroundColor: theme.surface, 
+                    borderColor: theme.border,
+                    color: theme.text 
+                  },
+                  formData.confirmPassword && formData.password !== formData.confirmPassword && [styles.inputError, { borderColor: theme.error }]
                 ]}
                 placeholder="Re-enter your password"
-                placeholderTextColor="#999"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.confirmPassword}
                 onChangeText={(value) => updateFormData('confirmPassword', value)}
                 secureTextEntry
@@ -147,14 +166,14 @@ const RegisterScreen = ({ navigation }) => {
               style={styles.checkboxContainer}
               onPress={() => setNotRobot(!notRobot)}
             >
-              <View style={[styles.checkbox, notRobot && styles.checkboxChecked]}>
+              <View style={[styles.checkbox, { borderColor: theme.border }, notRobot && [styles.checkboxChecked, { backgroundColor: theme.primary }]]}>
                 {notRobot && <Text style={styles.checkmark}>✓</Text>}
               </View>
-              <Text style={styles.checkboxLabel}>I am not a robot</Text>
+              <Text style={[styles.checkboxLabel, { color: theme.text }]}>I am not a robot</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.button, isLoading && styles.buttonDisabled]}
+              style={[styles.button, { backgroundColor: theme.primary }, isLoading && styles.buttonDisabled]}
               onPress={handleRegister}
               disabled={isLoading}
             >
@@ -167,7 +186,7 @@ const RegisterScreen = ({ navigation }) => {
               style={styles.linkContainer}
               onPress={() => navigation.navigate('Login')}
             >
-              <Text style={styles.linkText}>
+              <Text style={[styles.linkText, { color: theme.text }]}>
                 Already have an account? Sign in here
               </Text>
             </TouchableOpacity>
@@ -209,7 +228,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
   formContainer: {
-    backgroundColor: 'white',
     borderRadius: 15,
     padding: 25,
     shadowColor: '#000',
@@ -224,19 +242,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   input: {
     borderWidth: 2,
-    borderColor: '#ddd',
     borderRadius: 8,
     padding: 15,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
   },
   inputError: {
-    borderColor: '#dc3545',
+    // Color handled dynamically
   },
   checkboxContainer: {
     flexDirection: 'row',
@@ -247,15 +262,13 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderWidth: 2,
-    borderColor: '#ddd',
     borderRadius: 4,
     marginRight: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#007bff',
-    borderColor: '#007bff',
+    // Color handled dynamically
   },
   checkmark: {
     color: 'white',
@@ -264,10 +277,8 @@ const styles = StyleSheet.create({
   },
   checkboxLabel: {
     fontSize: 16,
-    color: '#333',
   },
   button: {
-    backgroundColor: '#007bff',
     borderRadius: 8,
     padding: 15,
     alignItems: 'center',
@@ -286,7 +297,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#007bff',
     fontSize: 16,
   },
 });

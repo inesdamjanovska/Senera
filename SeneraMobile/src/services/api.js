@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // Configure base URL for your backend using environment variables
-const API_HOST = process.env.EXPO_PUBLIC_API_HOST || '192.168.100.228';
+const API_HOST = process.env.EXPO_PUBLIC_API_HOST || '192.168.100.253';
 const API_PORT = process.env.EXPO_PUBLIC_API_PORT || '5000';
 const BASE_URL = `http://${API_HOST}:${API_PORT}`;
 

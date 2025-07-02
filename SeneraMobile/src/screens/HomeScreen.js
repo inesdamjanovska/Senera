@@ -11,17 +11,24 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 const { width } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleSettings = () => {
+    navigation.navigate('Settings');
   };
 
   const fashionImages = [
@@ -33,15 +40,17 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <ScrollView 
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[
         styles.scrollContent,
         { paddingBottom: Platform.OS === 'ios' ? 100 : 85 } // Space for tab bar
       ]}
     >
+      <StatusBar style={theme.statusBarStyle} />
+      
       {/* Header */}
       <LinearGradient
-        colors={['#007bff', '#0056b3']}
+        colors={[theme.gradientStart, theme.gradientEnd]}
         style={styles.header}
       >
         <View style={styles.headerContent}>
@@ -50,39 +59,44 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.userName}>{user?.display_name}! 👋</Text>
             <Text style={styles.tagline}>Create amazing outfits with AI</Text>
           </View>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={24} color="white" />
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity style={styles.headerButton} onPress={handleSettings}>
+              <Ionicons name="settings-outline" size={24} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerButton} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
         </View>
       </LinearGradient>
 
       {/* Quick Actions */}
-      <View style={styles.quickActions}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+      <View style={[styles.quickActions, { backgroundColor: theme.background }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Actions</Text>
         <View style={styles.actionGrid}>
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#e3f2fd' }]}
+            style={[styles.actionCard, { backgroundColor: theme.card }]}
             onPress={() => navigation.navigate('Wardrobe')}
           >
-            <Ionicons name="shirt-outline" size={32} color="#007bff" />
-            <Text style={styles.actionTitle}>My Wardrobe</Text>
-            <Text style={styles.actionSubtitle}>View & upload clothes</Text>
+            <Ionicons name="shirt-outline" size={32} color={theme.primary} />
+            <Text style={[styles.actionTitle, { color: theme.text }]}>My Wardrobe</Text>
+            <Text style={[styles.actionSubtitle, { color: theme.textSecondary }]}>View & upload clothes</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#f3e5f5' }]}
+            style={[styles.actionCard, { backgroundColor: theme.card }]}
             onPress={() => navigation.navigate('Closet')}
           >
-            <Ionicons name="sparkles-outline" size={32} color="#9c27b0" />
-            <Text style={styles.actionTitle}>Generate Outfit</Text>
-            <Text style={styles.actionSubtitle}>AI-powered styling</Text>
+            <Ionicons name="sparkles-outline" size={32} color={theme.primary} />
+            <Text style={[styles.actionTitle, { color: theme.text }]}>Generate Outfit</Text>
+            <Text style={[styles.actionSubtitle, { color: theme.textSecondary }]}>AI-powered styling</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Fashion Inspiration */}
       <View style={styles.inspiration}>
-        <Text style={styles.sectionTitle}>Fashion Inspiration</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Fashion Inspiration</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {fashionImages.map((item) => (
             <View key={item.id} style={styles.inspirationCard}>
@@ -97,22 +111,22 @@ const HomeScreen = ({ navigation }) => {
 
       {/* Tips Section */}
       <View style={styles.tips}>
-        <Text style={styles.sectionTitle}>Styling Tips</Text>
-        <View style={styles.tipCard}>
-          <Ionicons name="bulb-outline" size={24} color="#ff9800" />
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Styling Tips</Text>
+        <View style={[styles.tipCard, { backgroundColor: theme.card }]}>
+          <Ionicons name="bulb-outline" size={24} color={theme.warning} />
           <View style={styles.tipContent}>
-            <Text style={styles.tipTitle}>Upload Quality Photos</Text>
-            <Text style={styles.tipText}>
+            <Text style={[styles.tipTitle, { color: theme.text }]}>Upload Quality Photos</Text>
+            <Text style={[styles.tipText, { color: theme.textSecondary }]}>
               For best results, upload clear photos with good lighting. The AI works better with high-quality images!
             </Text>
           </View>
         </View>
         
-        <View style={styles.tipCard}>
-          <Ionicons name="color-palette-outline" size={24} color="#4caf50" />
+        <View style={[styles.tipCard, { backgroundColor: theme.card }]}>
+          <Ionicons name="color-palette-outline" size={24} color={theme.success} />
           <View style={styles.tipContent}>
-            <Text style={styles.tipTitle}>Mix & Match Colors</Text>
-            <Text style={styles.tipText}>
+            <Text style={[styles.tipTitle, { color: theme.text }]}>Mix & Match Colors</Text>
+            <Text style={[styles.tipText, { color: theme.textSecondary }]}>
               Try different color combinations! The AI can suggest unexpected pairings that look amazing together.
             </Text>
           </View>
@@ -125,7 +139,6 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   scrollContent: {
     flexGrow: 1,
@@ -139,6 +152,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerButton: {
+    padding: 8,
+    marginLeft: 8,
   },
   greeting: {
     fontSize: 16,
@@ -154,16 +175,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.7)',
   },
-  logoutButton: {
-    padding: 8,
-  },
   quickActions: {
     padding: 20,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 15,
   },
   actionGrid: {
@@ -185,13 +202,11 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginTop: 10,
     textAlign: 'center',
   },
   actionSubtitle: {
     fontSize: 12,
-    color: '#666',
     marginTop: 5,
     textAlign: 'center',
   },
@@ -228,7 +243,6 @@ const styles = StyleSheet.create({
   },
   tipCard: {
     flexDirection: 'row',
-    backgroundColor: 'white',
     padding: 15,
     borderRadius: 12,
     marginBottom: 15,
@@ -245,12 +259,10 @@ const styles = StyleSheet.create({
   tipTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 5,
   },
   tipText: {
     fontSize: 14,
-    color: '#666',
     lineHeight: 20,
   },
 });
