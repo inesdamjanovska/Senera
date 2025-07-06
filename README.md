@@ -8,7 +8,6 @@ Senera is a full-stack fashion AI application that helps users generate stylish 
 - 🤖 **AI-Powered Tagging**: Automatic categorization and tagging of clothing
 - 🎨 **Multiple AI Models**: Choose from DALL-E 3, Pollinations.ai (free), Hugging Face, and more
 - 📱 **Mobile App**: React Native mobile application
-- 🌐 **Automatic IP Detection**: No need to manually update IP addresses
 - 🔒 **User Authentication**: Secure user accounts and personal wardrobes
 - 🎯 **Smart Outfit Generation**: AI selects best matching items for any occasion
 
@@ -67,10 +66,6 @@ cd SeneraMobile
 # Install dependencies
 npm install
 
-# Create environment file
-echo "EXPO_PUBLIC_API_HOST=192.168.100.14" > .env
-echo "EXPO_PUBLIC_API_PORT=5000" >> .env
-
 # Start the app
 npm start
 ```
@@ -101,23 +96,6 @@ Senera/
 ```
 
 ## 🔧 Configuration
-
-### Environment Variables
-
-**Backend (.env):**
-```env
-OPENAI_API_KEY=your_openai_api_key_here
-API_HOST=192.168.100.14
-API_PORT=5000
-SECRET_KEY=your_secure_random_secret_key
-IMAGE_GENERATION_SERVICE=pollinations
-```
-
-**Frontend (.env):**
-```env
-EXPO_PUBLIC_API_HOST=192.168.100.14
-EXPO_PUBLIC_API_PORT=5000
-```
 
 ### AI Model Selection
 
@@ -240,7 +218,3 @@ For additional help, check:
 3. Make your changes
 4. Run tests and linting
 5. Submit a pull request
-
-## 📄 License
-
-[Add your license information here]
