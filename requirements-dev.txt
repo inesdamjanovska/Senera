@@ -1,0 +1,39 @@
+# Development requirements - install with: pip install -r requirements-dev.txt
+
+# Testing framework
+pytest==7.4.0
+pytest-flask==1.2.0
+pytest-cov==4.1.0
+
+# Code formatting and linting
+black==23.3.0
+flake8==6.0.0
+isort==5.12.0
+autopep8==2.0.2
+
+# Type checking
+mypy==1.4.1
+
+# Development tools
+watchdog==3.0.0  # For file watching during development
+python-decouple==3.8  # Alternative to python-dotenv with more features
+
+# Documentation
+sphinx==7.1.0
+sphinx-rtd-theme==1.3.0
+
+# Database tools
+flask-migrate==4.0.4  # For database migrations if needed in future
+
+# API documentation
+flask-restx==1.1.0  # For API documentation and Swagger UI
+
+# Security scanning
+safety==2.3.5  # Check for known security vulnerabilities
+bandit==1.7.5  # Security linter
+
+# Performance profiling
+flask-profiler==1.8.1  # Optional performance monitoring
+
+# Debug toolbar (for development)
+flask-debugtoolbar==0.13.1

@@ -26,6 +26,7 @@ const ClosetScreen = () => {
   const [selectedItems, setSelectedItems] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [outfitName, setOutfitName] = useState('');
+  const [selectedModel, setSelectedModel] = useState('dalle');
 
   const generateOutfit = async () => {
     if (!prompt.trim()) {
@@ -38,7 +39,7 @@ const ClosetScreen = () => {
       setGeneratedOutfit(null);
       setSelectedItems(null);
 
-      const response = await outfitAPI.generateCompleteOutfit(prompt.trim());
+      const response = await outfitAPI.generateCompleteOutfit(prompt.trim(), selectedModel);
       
       if (response.data.outfit_image_url) {
         setGeneratedOutfit(response.data.outfit_image_url);
@@ -125,7 +126,7 @@ const ClosetScreen = () => {
               {items.map((item, index) => (
                 <View key={index} style={styles.selectedItem}>
                   <Image
-                    source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.253'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${item.image_url}` }}
+                    source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.14'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${item.image_url}` }}
                     style={styles.selectedItemImage}
                     defaultSource={require('../../assets/icon.png')}
                   />
@@ -178,6 +179,52 @@ const ClosetScreen = () => {
           numberOfLines={3}
         />
         
+        {/* AI Model Selection */}
+        <Text style={[styles.modelLabel, { color: theme.text }]}>AI Image Model:</Text>
+        <View style={styles.modelContainer}>
+          {[
+            { id: 'dalle', name: 'DALL-E 3', description: 'Premium quality', icon: 'sparkles' },
+            { id: 'pollinations', name: 'Pollinations', description: 'Free & Fast', icon: 'flash' },
+            { id: 'huggingface', name: 'Stable Diffusion', description: 'Free & Open Source', icon: 'layers' },
+          ].map((model) => (
+            <TouchableOpacity
+              key={model.id}
+              style={[
+                styles.modelOption,
+                { 
+                  backgroundColor: selectedModel === model.id ? theme.primary : theme.surface,
+                  borderColor: selectedModel === model.id ? theme.primary : theme.border 
+                }
+              ]}
+              onPress={() => setSelectedModel(model.id)}
+              disabled={false} // Enable all models
+            >
+              <Ionicons 
+                name={model.icon} 
+                size={20} 
+                color={selectedModel === model.id ? 'white' : theme.text} 
+              />
+              <View style={styles.modelText}>
+                <Text style={[
+                  styles.modelName, 
+                  { color: selectedModel === model.id ? 'white' : theme.text }
+                ]}>
+                  {model.name}
+                </Text>
+                <Text style={[
+                  styles.modelDescription, 
+                  { color: selectedModel === model.id ? 'rgba(255,255,255,0.8)' : theme.textSecondary }
+                ]}>
+                  {model.description}
+                </Text>
+              </View>
+              {selectedModel === model.id && (
+                <Ionicons name="checkmark-circle" size={20} color="white" />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+        
         <TouchableOpacity
           style={[styles.generateButton, { backgroundColor: theme.primary }, isGenerating && styles.generateButtonDisabled]}
           onPress={generateOutfit}
@@ -222,9 +269,6 @@ const ClosetScreen = () => {
           </Text>
         </View>
       )}
-
-      {/* Selected Items */}
-      {renderSelectedItems()}
 
       {/* Generated Outfit */}
       {generatedOutfit && (
@@ -280,6 +324,9 @@ const ClosetScreen = () => {
         </View>
       )}
 
+      {/* Selected Items */}
+      {renderSelectedItems()}
+
       {/* Tips */}
       <View style={[styles.tipsContainer, { backgroundColor: theme.card }]}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Tips for Better Results:</Text>
@@ -307,6 +354,8 @@ const ClosetScreen = () => {
       </View>
     </ScrollView>
   );
+
+  
 };
 
 const styles = StyleSheet.create({
@@ -339,6 +388,35 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 10,
+  },
+  modelLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+    marginTop: 15,
+  },
+  modelContainer: {
+    marginBottom: 15,
+  },
+  modelOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    marginBottom: 8,
+  },
+  modelText: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  modelName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modelDescription: {
+    fontSize: 12,
+    marginTop: 2,
   },
   textInput: {
     borderRadius: 12,

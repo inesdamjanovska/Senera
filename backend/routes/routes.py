@@ -271,11 +271,12 @@ def setup_routes(app):
         try:
             data = request.get_json()
             user_prompt = data.get('prompt', '')
+            image_model = data.get('model', 'dalle')  # Default to DALL-E
             
             if not user_prompt:
                 return jsonify({'error': 'No prompt provided'}), 400
             
-            print(f"Generating complete outfit for prompt: {user_prompt}")
+            print(f"Generating complete outfit for prompt: {user_prompt} using model: {image_model}")
             
             # Step 1: Analyze prompt to get target tags
             target_tags = analyze_prompt_for_tags(user_prompt)
@@ -298,9 +299,9 @@ def setup_routes(app):
             collage_path = save_collage(collage_image, collage_filename)
             print(f"Collage saved: {collage_path}")
             
-            # Step 5: Generate outfit image from collage using DALL-E
-            print("Generating outfit image with DALL-E...")
-            outfit_image_url = generate_outfit_from_collage(collage_path, user_prompt)
+            # Step 5: Generate outfit image from collage using user's selected model
+            print(f"Generating outfit image with {image_model}...")
+            outfit_image_url = generate_outfit_from_collage(collage_path, user_prompt, image_model)
             print(f"Outfit generated: {outfit_image_url}")
             
             # Step 6: Prepare response with selected items details
@@ -640,3 +641,14 @@ def setup_routes(app):
             
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+    @app.route('/health')
+    def health_check():
+        """Health check endpoint for testing connectivity"""
+        from config import Config
+        return jsonify({
+            'status': 'healthy',
+            'api_host': Config.API_HOST,
+            'api_port': Config.API_PORT,
+            'timestamp': datetime.utcnow().isoformat()
+        })

@@ -93,7 +93,7 @@ def score_item_relevance(item, target_tags):
     
     return score
 
-def select_items_for_collage(target_tags, user_id, max_per_category=3):
+def select_items_for_collage(target_tags, user_id, max_per_category=5):
     """Select wardrobe items based on target tags for specific user only"""
     # Get items by type category for the specific user
     items_by_category = defaultdict(list)
@@ -172,22 +172,59 @@ def create_collage(selected_items, collage_size=(1024, 768)):
         available_width = collage_size[0] - (margin * 2)
         available_height = category_height - category_label_height - tag_height - spacing
         
-        # Determine layout: prefer horizontal arrangement
-        num_items = min(len(items), 3)
-        if num_items == 1:
-            item_width = available_width
-            item_height = available_height
-        elif num_items == 2:
-            item_width = (available_width - spacing) // 2
-            item_height = available_height
-        else:  # 3 items
+        # Determine layout: arrange items in rows if needed
+        num_items = min(len(items), 5)
+        if num_items <= 3:
+            # Single row layout for 1-3 items
+            if num_items == 1:
+                item_width = available_width
+                item_height = available_height
+                items_per_row = 1
+            elif num_items == 2:
+                item_width = (available_width - spacing) // 2
+                item_height = available_height
+                items_per_row = 2
+            else:  # 3 items
+                item_width = (available_width - (spacing * 2)) // 3
+                item_height = available_height
+                items_per_row = 3
+        else:
+            # Two row layout for 4-5 items
+            items_per_row = 3 if num_items == 4 else 3  # First row: 3 items, second row: 1-2 items
             item_width = (available_width - (spacing * 2)) // 3
-            item_height = available_height
+            item_height = (available_height - spacing) // 2
         
         x_offset = margin
         
-        for i, item in enumerate(items[:3]):
+        for i, item in enumerate(items[:5]):
             try:
+                # Calculate position for multi-row layout
+                col_offset = 0
+                if num_items <= 3:
+                    # Single row
+                    row = 0
+                    col = i
+                    current_x = margin + col * (item_width + spacing)
+                    current_y = y_offset + category_label_height + row * (item_height + spacing)
+                else:
+                    # Two rows: first 3 items in first row, remaining in second row
+                    if i < 3:
+                        row = 0
+                        col = i
+                        current_x = margin + col * (item_width + spacing)
+                    else:
+                        row = 1
+                        col = i - 3
+                        # Center items in second row if less than 3
+                        if num_items == 4:  # Only 1 item in second row
+                            col_offset = item_width + spacing  # Center it
+                        elif num_items == 5 and col < 2:  # 2 items in second row
+                            col_offset = (item_width + spacing) // 2  # Slight offset
+                        
+                        current_x = margin + col * (item_width + spacing) + col_offset
+                    
+                    current_y = y_offset + category_label_height + row * (item_height + spacing)
+                
                 # Load and process item image
                 item_path = os.path.join('uploads', os.path.basename(item.image_url))
                 if os.path.exists(item_path):
@@ -209,8 +246,8 @@ def create_collage(selected_items, collage_size=(1024, 768)):
                     item_img = item_img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                     
                     # Center the image in its allocated space
-                    img_x = x_offset + (item_width - new_width) // 2
-                    img_y = y_offset + category_label_height + (item_height - new_height) // 2
+                    img_x = current_x + (item_width - new_width) // 2
+                    img_y = current_y + (item_height - new_height) // 2
                     
                     # Paste the image
                     if item_img.mode == 'RGBA':
@@ -224,34 +261,46 @@ def create_collage(selected_items, collage_size=(1024, 768)):
                         tags_text = tags_text[:12] + "..."
                     
                     # Position tags at very bottom in small text
-                    text_x = x_offset + 2
-                    text_y = y_offset + category_height - tag_height - 2
+                    text_x = current_x + 2
+                    text_y = current_y + item_height - 12
                     draw.text((text_x, text_y), tags_text, fill='gray', font=tag_font)
                 
                 else:
                     # Draw placeholder if image not found
                     placeholder_color = '#f0f0f0'
-                    draw.rectangle([x_offset + 2, y_offset + category_label_height + 2, 
-                                  x_offset + item_width - 2, 
-                                  y_offset + category_label_height + item_height - 2], 
+                    draw.rectangle([current_x + 2, current_y + 2, 
+                                  current_x + item_width - 2, 
+                                  current_y + item_height - 2], 
                                   fill=placeholder_color, outline='#ddd')
                     
                     # Center "No Image" text
-                    text_x = x_offset + item_width // 2 - 25
-                    text_y = y_offset + category_label_height + item_height // 2
+                    text_x = current_x + item_width // 2 - 25
+                    text_y = current_y + item_height // 2
                     draw.text((text_x, text_y), "No Image", fill='gray', font=tag_font)
                 
             except Exception as e:
                 print(f"Error processing item {item.id}: {e}")
+                # Calculate position for error placeholder (simplified)
+                if num_items <= 3:
+                    current_x = margin + i * (item_width + spacing)
+                    current_y = y_offset + category_label_height
+                else:
+                    if i < 3:
+                        current_x = margin + i * (item_width + spacing)
+                        current_y = y_offset + category_label_height
+                    else:
+                        col = i - 3
+                        col_offset = (item_width + spacing) // 2 if num_items == 4 else 0
+                        current_x = margin + col * (item_width + spacing) + col_offset
+                        current_y = y_offset + category_label_height + item_height + spacing
+                
                 # Draw error placeholder
-                draw.rectangle([x_offset + 2, y_offset + category_label_height + 2, 
-                              x_offset + item_width - 2, 
-                              y_offset + category_label_height + item_height - 2], 
+                draw.rectangle([current_x + 2, current_y + 2, 
+                              current_x + item_width - 2, 
+                              current_y + item_height - 2], 
                               fill='#ffe0e0', outline='#ff9999')
-                draw.text((x_offset + 5, y_offset + category_label_height + 5), 
+                draw.text((current_x + 5, current_y + 5), 
                          "Error", fill='red', font=tag_font)
-            
-            x_offset += item_width + spacing
         
         y_offset += category_height
     
@@ -267,8 +316,14 @@ def save_collage(collage_image, filename="collage.png"):
     collage_image.save(filepath, 'PNG', optimize=True, compress_level=6)
     return filepath
 
-def generate_outfit_from_collage(collage_path, user_prompt):
-    """Send collage image to DALL-E to generate outfit photo"""
+def generate_outfit_from_collage(collage_path, user_prompt, image_service="dalle"):
+    """Send collage image to AI service to generate outfit photo
+    
+    Args:
+        collage_path: Path to the collage image
+        user_prompt: User's outfit request
+        image_service: Which service to use ("dalle", "pollinations", "huggingface", "replicate")
+    """
     api_key = os.getenv('OPENAI_API_KEY')
     
     # Encode image to base64
@@ -291,21 +346,21 @@ def generate_outfit_from_collage(collage_path, user_prompt):
                         "type": "text",
                         "text": f"""You are a professional fashion stylist. Analyze this clothing collage and SELECT the best combination of items that would create a stylish, cohesive outfit for: "{user_prompt}"
 
-FROM ALL THE ITEMS SHOWN, choose only 3-5 pieces that work best together and would create the most fashionable outfit.
+FROM ALL THE ITEMS SHOWN (up to 5 items per category), choose only 3-6 pieces that work best together and would create the most fashionable outfit. You now have more variety to choose from in each category.
 
 For your SELECTED items only, provide extremely detailed descriptions:
 
 1. EXACT CLOTHING TYPES: Identify each selected piece precisely (e.g., "crew neck cotton t-shirt", "high-waisted straight-leg jeans", "white canvas sneakers")
 
-2. COLORS & PATTERNS: Describe exact colors, patterns, textures (e.g., "navy blue", "faded light blue denim", "solid white")
+2. COLORS & PATTERNS: Describe exact colors, patterns (even the amount of stripes for example), textures (e.g., "navy blue", "faded light blue denim", "solid white")
 
 3. STYLE DETAILS: Note specific design elements (e.g., "button-front", "rolled cuffs", "minimalist design")
 
 4. FIT & SILHOUETTE: How items should fit together (e.g., "fitted top with relaxed jeans", "oversized sweater tucked into high-waisted pants")
 
-5. WHY THESE WORK TOGETHER: Briefly explain why this combination creates a cohesive look
+5. WHY THESE WORK TOGETHER: Briefly explain why this combination creates a cohesive look and how they will be styled together.
 
-Focus on creating ONE perfect outfit that matches the "{user_prompt}" style. Ignore items that don't fit well with your selection."""
+Focus on creating ONE perfect outfit that matches the "{user_prompt}" style. With more options available, select the best matching items and ignore those that don't fit well with your selection."""
                     },
                     {
                         "type": "image_url",
@@ -332,26 +387,44 @@ Focus on creating ONE perfect outfit that matches the "{user_prompt}" style. Ign
     clothing_description = analyze_response.json()['choices'][0]['message']['content']
     print(f"Selected outfit description: {clothing_description}")
     
-    # Enhanced DALL-E prompt for professional boutique-style photography
-    dalle_prompt = f"""Professional fashion e-commerce photography of a single model wearing the selected outfit.
+    # Choose image generation service
+    if image_service.lower() == "pollinations":
+        print("Using Pollinations.ai for image generation...")
+        return generate_outfit_with_pollinations(clothing_description, user_prompt)
+    
+    elif image_service.lower() == "huggingface":
+        print("Using Hugging Face for image generation...")
+        result = generate_outfit_with_huggingface(clothing_description, user_prompt)
+        if result:
+            return result
+        else:
+            print("Hugging Face failed, falling back to DALL-E...")
+    
+    elif image_service.lower() == "replicate":
+        print("Using Replicate for image generation...")
+        result = generate_outfit_with_replicate(clothing_description, user_prompt)
+        if result:
+            return result
+        else:
+            print("Replicate failed, falling back to DALL-E...")
+    
+    # Default to DALL-E or fallback
+    print("Using DALL-E 3 for image generation...")
+    
+    # Updated DALL-E prompt with enhanced styling instructions
+    dalle_prompt = f"""Full-body photo of a single female fashion model **wearing the following outfit**: {clothing_description}
 
-SELECTED OUTFIT: {clothing_description}
+Instructions:
+- The model must be **wearing all the described clothing and accessories**
+- Model is standing in a neutral pose, front-facing
+- Pure white studio background, catalog photography style
+- No collage layout, no flat-lay images, no side-by-side items
+- No multiple angles, no floating clothes, no split panels
+- Focus on realism and professional fashion photography
+- Emphasize styling with jewelry and formal elegance for a high-end restaurant setting
 
-STYLE GOAL: {user_prompt}
-
-PHOTOGRAPHY REQUIREMENTS:
-- ONE beautiful model only(white), no duplicates or multiple perspectives
-- Clean white background, completely plain and seamless
-- NO harsh shadows, NO dramatic lighting effects
-- Full body shot showing the complete outfit clearly
-- Model standing naturally, facing forward in a confident pose
-- Sharp, crystal-clear image quality like high-end fashion websites
-- Boutique catalog style photography
-- Clothing should be the main focus and clearly visible as desribed
-- Clean, minimalist aesthetic like Zara, H&M, or ASOS product photos
-- Model should look natural and approachable
-
-AVOID: Multiple models, busy backgrounds, shadows, dramatic poses, artistic effects, multiple angles, blurry quality, low resolution."""
+Style theme: {user_prompt}
+"""
     
     print(f"DALL-E prompt: {dalle_prompt}")
     
@@ -377,3 +450,130 @@ AVOID: Multiple models, busy backgrounds, shadows, dramatic poses, artistic effe
         return outfit_image_url
     else:
         raise Exception(f"DALL-E error: {dalle_response.text}")
+
+def generate_outfit_with_pollinations(clothing_description, user_prompt):
+    """Generate outfit using Pollinations.ai (free, no API key needed)"""
+    # Enhanced prompt for Pollinations with dress handling
+    prompt = f"""Fashion catalog photo: single female model wearing {clothing_description}, {user_prompt} style.
+
+Instructions:
+- Head-to-toe full body view, standing pose
+- White background, professional e-commerce photography
+- If outfit includes a full-length dress or maxi dress, do NOT add separate bottoms (pants/skirts)
+- Dresses are complete garments worn alone, not with additional bottoms
+- Show complete outfit from head to feet including footwear
+- One person only, no duplicates, no collages
+- Realistic fashion photography style"""
+    
+    # URL encode the prompt
+    import urllib.parse
+    encoded_prompt = urllib.parse.quote(prompt)
+    
+    # Pollinations.ai API endpoint
+    pollinations_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&model=flux&nologo=true&enhance=true"
+    
+    return pollinations_url
+
+def generate_outfit_with_huggingface(clothing_description, user_prompt):
+    """Generate outfit using Hugging Face Stable Diffusion (free tier)"""
+    try:
+        import requests
+        import io
+        from datetime import datetime
+        
+        # Get Hugging Face API key from environment
+        hf_token = os.getenv('HUGGINGFACE_API_KEY')
+        if not hf_token:
+            print("Hugging Face API key not found in environment variables")
+            return None
+        
+        # Hugging Face API endpoint for Stable Diffusion
+        HF_API_URL = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
+        
+        # Enhanced prompt for Hugging Face with dress handling
+        prompt = f"""Fashion catalog photo: single female model wearing {clothing_description}, {user_prompt} style.
+
+Instructions:
+- Head-to-toe full body view, standing pose
+- White background, professional e-commerce photography
+- If outfit includes a full-length dress or maxi dress, do NOT add separate bottoms
+- Show complete outfit from head to feet including footwear
+- One person only, no duplicates, realistic fashion photography"""
+        
+        negative_prompt = "multiple people, busy background, shadows, blurry, low quality, cropped, duplicates, side-by-side, collage, floating clothes"
+        
+        payload = {
+            "inputs": prompt,
+            "parameters": {
+                "negative_prompt": negative_prompt,
+                "num_inference_steps": 30,
+                "guidance_scale": 8.0,
+                "width": 1024,
+                "height": 1024
+            }
+        }
+        
+        headers = {"Authorization": f"Bearer {hf_token}"}
+        
+        print(f"Hugging Face prompt: {prompt}")
+        
+        # Make API request
+        response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=120)
+        
+        if response.status_code == 200:
+            # Save the generated image
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            filename = f"hf_outfit_{timestamp}.png"
+            filepath = os.path.join('uploads', filename)
+            
+            # Ensure uploads directory exists
+            os.makedirs('uploads', exist_ok=True)
+            
+            # Save the image data
+            with open(filepath, 'wb') as f:
+                f.write(response.content)
+            
+            # Return the full URL that the frontend can access
+            from config import Config
+            base_url = f"http://{os.getenv('API_HOST', '192.168.100.14')}:{os.getenv('API_PORT', '5000')}"
+            return f"{base_url}/uploads/{filename}"
+            
+        elif response.status_code == 503:
+            print("Hugging Face model is loading, please try again in a few moments")
+            return None
+        else:
+            print(f"Hugging Face API error {response.status_code}: {response.text}")
+            return None
+        
+    except Exception as e:
+        print(f"Hugging Face generation error: {e}")
+        return None
+
+def generate_outfit_with_replicate(clothing_description, user_prompt):
+    """Generate outfit using Replicate (free tier available)"""
+    try:
+        # This would require the replicate Python package and API key
+        # pip install replicate
+        # import replicate
+        
+        prompt = f"Fashion catalog: single model wearing {clothing_description}, {user_prompt} style, white background, professional photo"
+        
+        # Example Replicate API call (commented out as it requires setup)
+        # output = replicate.run(
+        #     "stability-ai/stable-diffusion:27b93a2413e7f36cd83da926f3656280b2931564ff050bf9575f1fdf9bcd7478",
+        #     input={
+        #         "prompt": prompt,
+        #         "negative_prompt": "multiple people, busy background, blurry",
+        #         "width": 1024,
+        #         "height": 1024,
+        #         "num_inference_steps": 25,
+        #         "guidance_scale": 7.5
+        #     }
+        # )
+        # return output[0] if output else None
+        
+        return None
+        
+    except Exception as e:
+        print(f"Replicate generation error: {e}")
+        return None

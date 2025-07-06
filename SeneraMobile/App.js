@@ -82,7 +82,7 @@ function MainTabNavigator() {
       <Tab.Screen 
         name="Home" 
         component={HomeScreen} 
-        options={{ title: '👗 Senera' }}
+        options={{ title: 'Senera' }}
       />
       <Tab.Screen 
         name="Wardrobe" 

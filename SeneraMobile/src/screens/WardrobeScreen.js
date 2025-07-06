@@ -510,7 +510,7 @@ const WardrobeScreen = () => {
         activeOpacity={0.8}
       >
         <Image
-          source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.253'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${item.image_url}` }}
+          source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.14'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${item.image_url}` }}
           style={styles.itemImageSimple}
           defaultSource={require('../../assets/icon.png')}
         />
@@ -535,7 +535,7 @@ const WardrobeScreen = () => {
     if (outfit.image_url.startsWith('http')) {
       imageUri = outfit.image_url;
     } else {
-      imageUri = `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.253'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${outfit.image_url}`;
+      imageUri = `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.14'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${outfit.image_url}`;
     }
     
     return (
@@ -619,7 +619,7 @@ const WardrobeScreen = () => {
             {selectedItem && (
               <View style={[styles.modalImageContainer, { backgroundColor: theme.surface }]}>
                 <Image
-                  source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.253'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${selectedItem.image_url}` }}
+                  source={{ uri: `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.14'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${selectedItem.image_url}` }}
                   style={styles.modalImage}
                   resizeMode="contain"
                 />
@@ -631,7 +631,6 @@ const WardrobeScreen = () => {
               <View style={[styles.modalDetails, { borderTopColor: theme.border }]}>
                 <Text style={[styles.modalTitle, { color: theme.text }]}>{selectedItem.type_category}</Text>
                 <Text style={[styles.modalDate, { color: theme.textSecondary }]}>
-                  Added on {new Date(selectedItem.timestamp).toLocaleDateString()}
                 </Text>
                 
                 {/* Tags */}
@@ -703,7 +702,7 @@ const WardrobeScreen = () => {
                   source={{ 
                     uri: selectedOutfit.image_url.startsWith('http') 
                       ? selectedOutfit.image_url 
-                      : `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.253'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${selectedOutfit.image_url}`
+                      : `http://${process.env.EXPO_PUBLIC_API_HOST || '192.168.100.14'}:${process.env.EXPO_PUBLIC_API_PORT || '5000'}${selectedOutfit.image_url}`
                   }}
                   style={styles.modalImage}
                   resizeMode="contain"
@@ -1136,7 +1135,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   outfitItemSimple: {
-    height: 320, // Further increased height for full outfit display
+    height: 250, // Increased height for better image display
     marginBottom: 15,
     borderRadius: 12,
     overflow: 'hidden',
@@ -1154,20 +1153,17 @@ const styles = StyleSheet.create({
   },
   outfitImageSimple: {
     width: '100%',
-    height: '85%', // Leave space for overlay at bottom
-    backgroundColor: '#f0f0f0',
-    padding: 5, // Add small padding around the image
+    height: '100%',
+    backgroundColor: '#f8f9fa',
   },
   outfitOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    height: '15%', // Fixed height for overlay
-    justifyContent: 'center',
+    paddingVertical: 8,
   },
   outfitNameOverlay: {
     color: 'white',

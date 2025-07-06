@@ -1,0 +1,35 @@
+# Production requirements - includes base requirements plus production-specific packages
+
+# Include base requirements
+-r requirements.txt
+
+# Production web server
+gunicorn==21.2.0
+
+# Production database (if switching from SQLite)
+# psycopg2-binary==2.9.7  # PostgreSQL
+# pymysql==1.1.0  # MySQL
+# cx_oracle==8.3.0  # Oracle
+
+# Caching
+redis==4.6.0  # For Redis caching and sessions
+flask-caching==2.0.2
+
+# Monitoring and logging
+sentry-sdk[flask]==1.28.1  # Error tracking
+structlog==23.1.0  # Structured logging
+
+# Security
+flask-limiter==3.3.1  # Rate limiting
+flask-talisman==1.1.0  # Security headers
+
+# Environment and configuration for production
+python-decouple==3.8  # More robust than python-dotenv for production
+
+# SSL and certificates
+pyopenssl==23.2.0
+certifi==2023.5.7
+
+# Health checks and metrics
+flask-healthz==0.0.3
+prometheus-flask-exporter==0.22.4

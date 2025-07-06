@@ -1,6 +1,10 @@
-# Environment variables
+# Environment variables and secrets
 .env
+.env.local
+.env.development
+.env.production
 backend/.env
+SeneraMobile/.env
 
 # Python
 __pycache__/
@@ -20,31 +24,119 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual environment
 venv/
 env/
 ENV/
+.venv/
+.env/
 
-# IDE
+# IDE and editors
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+.project
+.pydevproject
 
-# OS
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Uploads folder (temporary files)
+# Application specific
 uploads/
 backend/uploads/
+cleaned_*.png
+collage_*.png
 
-# Logs
+# Flask sessions and cache
+flask_session/
+backend/flask_session/
+*.session
+
+# Database files (SQLite)
+*.db
+*.sqlite
+*.sqlite3
+backend/senera.db
+
+# Logs and debugging
 *.log
+logs/
+debug.log
+error.log
+
+# Testing
+.coverage
+.pytest_cache/
+.tox/
+htmlcov/
+
+# Documentation
+docs/_build/
+site/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# AI model downloads and cache
+.rembg_cache/
+transformers_cache/
+
+# Package managers
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Node.js (for any future frontend builds)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# React Native / Expo (Mobile app)
+SeneraMobile/node_modules/
+SeneraMobile/.expo/
+SeneraMobile/dist/
+SeneraMobile/web-build/
+SeneraMobile/expo-env.d.ts
+SeneraMobile/.metro-health-check*
+
+# Mobile specific
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.kotlin/
+
+# TypeScript
+*.tsbuildinfo
 logs/
 
 # Node modules (for future React frontend)

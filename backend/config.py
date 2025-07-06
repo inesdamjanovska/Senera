@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from ip_utils import get_api_host
 
 load_dotenv()
 
@@ -13,6 +14,10 @@ class Config:
     SESSION_PERMANENT = False
     SESSION_USE_SIGNER = True
     
-    # Network Configuration
-    API_HOST = os.getenv('API_HOST', '192.168.100.253')
+    # Network Configuration - Auto-detect IP if not set in environment
+    API_HOST = get_api_host()  # This will auto-detect if API_HOST env var is not set
     API_PORT = int(os.getenv('API_PORT', '5000'))
+    
+    # Image Generation Service Configuration
+    # Options: "dalle", "pollinations", "huggingface", "replicate"
+    IMAGE_GENERATION_SERVICE = os.getenv('IMAGE_GENERATION_SERVICE', 'pollinations')

@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // Configure base URL for your backend using environment variables
-const API_HOST = process.env.EXPO_PUBLIC_API_HOST || '192.168.100.253';
+const API_HOST = process.env.EXPO_PUBLIC_API_HOST || '192.168.100.14';
 const API_PORT = process.env.EXPO_PUBLIC_API_PORT || '5000';
 const BASE_URL = `http://${API_HOST}:${API_PORT}`;
 
@@ -32,7 +32,7 @@ export const wardrobeAPI = {
 };
 
 export const outfitAPI = {
-  generateCompleteOutfit: (prompt) => api.post('/generate-complete-outfit', { prompt }),
+  generateCompleteOutfit: (prompt, model = 'dalle') => api.post('/generate-complete-outfit', { prompt, model }),
   analyzePrompt: (prompt) => api.post('/analyze-prompt', { prompt }),
   saveOutfit: (outfitData) => api.post('/save-outfit', outfitData),
   getSavedOutfits: () => api.get('/saved-outfits'),
