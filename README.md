@@ -2,16 +2,16 @@
 
 Senera is a full-stack fashion AI application that helps users generate stylish outfits using their own clothes. Users upload images of clothing items they own, and the system stores, tags, and organizes them using AI. Based on prompts like occasion, weather, or style, the app intelligently selects relevant clothing items and generates virtual outfit images using multiple AI models.
 
-## ✨ Features
+## Features
 
-- 🏠 **Personal Wardrobe Management**: Upload and organize your clothing items
-- 🤖 **AI-Powered Tagging**: Automatic categorization and tagging of clothing
-- 🎨 **Multiple AI Models**: Choose from DALL-E 3, Pollinations.ai (free), Hugging Face, and more
-- 📱 **Mobile App**: React Native mobile application
-- 🔒 **User Authentication**: Secure user accounts and personal wardrobes
-- 🎯 **Smart Outfit Generation**: AI selects best matching items for any occasion
+-  **Personal Wardrobe Management**: Upload and organize your clothing items
+-  **AI-Powered Tagging**: Automatic categorization and tagging of clothing
+-  **Multiple AI Models**: Choose from DALL-E 3, Pollinations.ai (free), Hugging Face, and more
+-  **Mobile App**: React Native mobile application
+-  **User Authentication**: Secure user accounts and personal wardrobes
+-  **Smart Outfit Generation**: AI selects best matching items for any occasion
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Automatic Setup (Recommended)
 
@@ -70,7 +70,7 @@ npm install
 npm start
 ```
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 Senera/
@@ -95,7 +95,7 @@ Senera/
 └── requirements-prod.txt   # Production dependencies
 ```
 
-## 🔧 Configuration
+##  Configuration
 
 ### AI Model Selection
 
@@ -110,7 +110,7 @@ Set your preferred service in `backend/.env`:
 IMAGE_GENERATION_SERVICE=pollinations  # or dalle, huggingface, replicate
 ```
 
-## 🌐 IP Address Management
+## IP Address Management
 
 The app includes automatic IP detection to eliminate manual configuration:
 
@@ -125,7 +125,7 @@ python update_ip.py
 
 This updates all configuration files automatically.
 
-## 📱 Mobile App Usage
+## Mobile App Usage
 
 1. **Register/Login**: Create an account or sign in
 2. **Upload Clothes**: Take photos or upload images of your clothing
@@ -156,7 +156,7 @@ flake8 .
 ### API Testing
 The backend includes a health check endpoint at `/health` for connectivity testing.
 
-## 🚢 Deployment
+## Deployment
 
 ### Production Setup
 ```bash
@@ -170,7 +170,7 @@ pip install -r requirements-prod.txt
 - Set up monitoring and logging
 - Use environment variables for all secrets
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -195,7 +195,7 @@ For additional help, check:
 - `WARDROBE_FEATURES.md` for feature details
 - Backend logs for error details
 
-## 📋 Dependencies
+## Dependencies
 
 ### Backend (Python)
 - Flask - Web framework
@@ -211,10 +211,4 @@ For additional help, check:
 - Axios - HTTP client
 - Various Expo modules for camera, image picker, etc.
 
-## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
